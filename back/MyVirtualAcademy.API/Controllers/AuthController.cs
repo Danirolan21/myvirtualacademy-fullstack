@@ -15,15 +15,18 @@ namespace MyVirtualAcademy.API.Controllers
         private readonly RepositoryMyVirtualAcademy repo;
         private readonly JwtTokenService tokenService;
         private readonly IConfiguration config;
+        private readonly IWebHostEnvironment env;
 
         public AuthController(
             RepositoryMyVirtualAcademy repo,
             JwtTokenService tokenService,
-            IConfiguration config)
+            IConfiguration config,
+            IWebHostEnvironment env)
         {
             this.repo = repo;
             this.tokenService = tokenService;
             this.config = config;
+            this.env = env;
         }
 
         public record LoginRequest(string Email, string Password);
@@ -142,11 +145,12 @@ namespace MyVirtualAcademy.API.Controllers
         private void SetRefreshCookie(string token)
         {
             var expiryDays = double.Parse(config["JwtSettings:RefreshTokenExpiryDays"]!);
+            var isProd = env.IsProduction();
             Response.Cookies.Append("refresh_token", token, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
+                Secure = isProd,
+                SameSite = isProd ? SameSiteMode.Strict : SameSiteMode.Lax,
                 Expires = DateTimeOffset.UtcNow.AddDays(expiryDays)
             });
         }
