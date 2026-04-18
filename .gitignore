@@ -1,0 +1,30 @@
+# Monolito original — no se versionará
+MyVirtualAcademy/
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# .NET
+**/bin/
+**/obj/
+**/*.user
+
+# Node
+**/node_modules/
+**/dist/
+**/dist-ssr/
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
