@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getContent, registerView } from '../../api/content'
+import { formatDateTime } from '../../utils/format'
 import type { RecursoViewModel } from '../../types'
 
 const route = useRoute()
@@ -41,7 +42,7 @@ onMounted(async () => {
               <span class="badge bg-secondary">Documento</span>
             </div>
             <div class="card-body">
-              <small class="text-muted">Publicado el {{ new Date(recurso.fechaPublicacion).toLocaleString('es-ES') }}</small>
+              <small class="text-muted">Publicado el {{ formatDateTime(recurso.fechaPublicacion) }}</small>
               <div v-if="recurso.descripcion" class="mt-3 mb-4">
                 <h5>Descripción</h5>
                 <p>{{ recurso.descripcion }}</p>

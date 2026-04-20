@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { getUser } from '../../api/users'
+import { formatDate } from '../../utils/format'
 import type { Usuario } from '../../types'
 
 const auth = useAuthStore()
@@ -43,7 +44,7 @@ onMounted(async () => {
           <h2>Teléfono:</h2>
           <p>{{ usuario.telefono || 'No especificado' }}</p>
           <h2>Fecha de registro:</h2>
-          <p>{{ new Date(usuario.fechaRegistro).toLocaleDateString('es-ES') }}</p>
+          <p>{{ formatDate(usuario.fechaRegistro) }}</p>
         </div>
       </div>
     </template>

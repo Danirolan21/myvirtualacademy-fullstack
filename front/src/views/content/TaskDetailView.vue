@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getTask, submitTask, gradeTask } from '../../api/tasks'
+import { formatDateTime } from '../../utils/format'
 import type { TareaViewModel, EntregaTareaVM } from '../../types'
 import CountdownTimer from '../../components/CountdownTimer.vue'
 import FileUploader from '../../components/FileUploader.vue'
@@ -98,7 +99,7 @@ async function saveGrade() {
                   <div class="task-info">
                     <div class="info-item mb-2">
                       <i class="fas fa-calendar-alt text-success me-2"></i>
-                      Entrega: <strong>{{ new Date(tarea.fechaEntrega).toLocaleString('es-ES') }}</strong>
+                      Entrega: <strong>{{ formatDateTime(tarea.fechaEntrega) }}</strong>
                     </div>
                     <div class="info-item mb-2">
                       <i class="fas fa-star text-success me-2"></i>
@@ -151,7 +152,7 @@ async function saveGrade() {
                 <div v-if="tarea.entrega" class="card border-success mb-3">
                   <div class="card-header bg-success bg-opacity-10">
                     <div class="d-flex justify-content-between align-items-center">
-                      <strong>Entregado el: {{ new Date(tarea.entrega.fechaEntrega).toLocaleString('es-ES') }}</strong>
+                      <strong>Entregado el: {{ formatDateTime(tarea.entrega.fechaEntrega) }}</strong>
                       <span class="badge" :class="new Date(tarea.entrega.fechaEntrega) > new Date(tarea.fechaEntrega) ? 'bg-warning text-dark' : 'bg-success'">
                         {{ new Date(tarea.entrega.fechaEntrega) > new Date(tarea.fechaEntrega) ? 'Tardía' : 'A tiempo' }}
                       </span>
@@ -210,7 +211,7 @@ async function saveGrade() {
                       <tr v-for="e in tarea.entregas" :key="e.idEntrega">
                         <td>{{ e.nombreEstudiante }}</td>
                         <td>
-                          {{ new Date(e.fechaEntrega).toLocaleString('es-ES') }}
+                          {{ formatDateTime(e.fechaEntrega) }}
                           <span v-if="new Date(e.fechaEntrega) > new Date(tarea.fechaEntrega)" class="badge bg-warning text-dark ms-2">Tardía</span>
                         </td>
                         <td>

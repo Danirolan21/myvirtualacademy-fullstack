@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getCourse } from '../../api/courses'
+import { formatDate } from '../../utils/format'
 
 const route = useRoute()
 const curso = ref<any>(null)
@@ -40,8 +41,8 @@ onMounted(async () => {
               <p v-if="curso.descripcion"><strong>Descripción:</strong> {{ curso.descripcion }}</p>
               <p><strong>Profesor:</strong> {{ curso.nombreProfesor }}</p>
               <p v-if="curso.nombreSuplente"><strong>Suplente:</strong> {{ curso.nombreSuplente }}</p>
-              <p><strong>Inicio:</strong> {{ new Date(curso.fechaInicio).toLocaleDateString('es-ES') }}</p>
-              <p><strong>Fin:</strong> {{ new Date(curso.fechaFin).toLocaleDateString('es-ES') }}</p>
+              <p><strong>Inicio:</strong> {{ formatDate(curso.fechaInicio) }}</p>
+              <p><strong>Fin:</strong> {{ formatDate(curso.fechaFin) }}</p>
               <p><strong>Asignaturas:</strong> {{ curso.numeroAsignaturas }}</p>
               <p><strong>Alumnos:</strong> {{ curso.numeroAlumnos }}</p>
             </div>

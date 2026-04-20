@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getUser, updateUser } from '../../api/users'
+import { formatDate } from '../../utils/format'
 import type { Usuario } from '../../types'
 
 const auth = useAuthStore()
@@ -77,7 +78,7 @@ async function submit() {
             <input v-model="usuario.telefono" type="tel" class="form-control" placeholder="Número de teléfono" />
           </div>
           <h2>Fecha de registro:</h2>
-          <p>{{ new Date(usuario.fechaRegistro).toLocaleDateString('es-ES') }}</p>
+          <p>{{ formatDate(usuario.fechaRegistro) }}</p>
         </div>
       </div>
     </form>

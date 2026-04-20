@@ -28,14 +28,16 @@ watch(() => props.idCurso, async (id) => {
   try {
     const res = await getCourse(id)
     const d = res.data
+    // GetById devuelve { curso: {...}, profesores: [...], ... }
+    const c = d.curso ?? d
     form.value = {
-      nombre: d.nombreCurso,
-      descripcion: d.descripcion ?? '',
-      idProfesor: d.idProfesor,
-      idSuplente: d.idSuplente ?? '',
-      fechaInicio: d.fechaInicio.slice(0, 10),
-      fechaFin: d.fechaFin.slice(0, 10),
-      estado: d.estado,
+      nombre: c.nombreCurso ?? '',
+      descripcion: c.descripcion ?? '',
+      idProfesor: c.idProfesor ?? 0,
+      idSuplente: c.idSuplente ?? '',
+      fechaInicio: (c.fechaInicio ?? '').slice(0, 10),
+      fechaFin: (c.fechaFin ?? '').slice(0, 10),
+      estado: c.estado ?? 'Activo',
     }
     profesores.value = d.profesores ?? []
   } finally {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { formatDate } from '../../utils/format'
 import { getSubjectsByStudent } from '../../api/subjects'
 import type { AsignaturaUsuarioDTO } from '../../types'
 
@@ -43,7 +44,7 @@ function diasRestantes(fechaFin: string) {
           <div class="course-info"><i class="fas fa-user-tie me-1"></i> {{ asig.nombreProfesor }}</div>
           <div class="course-dates">
             <i class="far fa-calendar-alt me-1"></i>
-            {{ new Date(asig.fechaInicio).toLocaleDateString('es-ES') }} - {{ new Date(asig.fechaFin).toLocaleDateString('es-ES') }}
+            {{ formatDate(asig.fechaInicio) }} - {{ formatDate(asig.fechaFin) }}
           </div>
           <div class="course-progress mt-3">
             <div class="progress-label">

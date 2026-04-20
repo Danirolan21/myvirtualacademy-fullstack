@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { formatDate } from '../../utils/format'
 import { getCourses } from '../../api/courses'
 import { getSubjectsByProfessor } from '../../api/subjects'
 import type { VistaCursosDetalles, VistaAsignaturasProfesor } from '../../types'
@@ -48,7 +49,7 @@ onMounted(async () => {
           </div>
           <div class="course-content">
             <div class="course-info"><i class="fas fa-user-tie me-1"></i> Profesor: {{ curso.nombreProfesor }}</div>
-            <div class="course-dates"><i class="far fa-calendar-alt me-1"></i> {{ new Date(curso.fechaInicio).toLocaleDateString('es-ES') }} - {{ new Date(curso.fechaFin).toLocaleDateString('es-ES') }}</div>
+            <div class="course-dates"><i class="far fa-calendar-alt me-1"></i> {{ formatDate(curso.fechaInicio) }} - {{ formatDate(curso.fechaFin) }}</div>
             <div class="course-stats">
               <div class="course-stat"><div class="course-stat-value">{{ curso.numeroAsignaturas }}</div><div class="course-stat-label">Asignaturas</div></div>
               <div class="course-stat"><div class="course-stat-value">{{ curso.numeroAlumnos }}</div><div class="course-stat-label">Alumnos</div></div>
@@ -72,7 +73,7 @@ onMounted(async () => {
           </div>
           <div class="course-content">
             <div class="course-info"><i class="fas fa-book me-1"></i> {{ asig.nombreCurso }}</div>
-            <div class="course-dates"><i class="far fa-calendar-alt me-1"></i> {{ new Date(asig.fechaInicio).toLocaleDateString('es-ES') }} - {{ new Date(asig.fechaFin).toLocaleDateString('es-ES') }}</div>
+            <div class="course-dates"><i class="far fa-calendar-alt me-1"></i> {{ formatDate(asig.fechaInicio) }} - {{ formatDate(asig.fechaFin) }}</div>
             <div class="course-stats">
               <div class="course-stat"><div class="course-stat-value">{{ asig.numeroTemas }}</div><div class="course-stat-label">Temas</div></div>
               <div class="course-stat"><div class="course-stat-value">{{ asig.numeroContenidos }}</div><div class="course-stat-label">Contenidos</div></div>
