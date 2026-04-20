@@ -11,6 +11,7 @@ using MyVirtualAcademy.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddResponseCaching();
 builder.Services.AddEndpointsApiExplorer();
 
 // Swagger con soporte JWT
@@ -120,6 +121,7 @@ app.UseStaticFiles();
 // CORS debe ir antes de Authentication/Authorization
 app.UseCors("AllowFront");
 
+app.UseResponseCaching();
 app.UseAuthentication();
 app.UseAuthorization();
 

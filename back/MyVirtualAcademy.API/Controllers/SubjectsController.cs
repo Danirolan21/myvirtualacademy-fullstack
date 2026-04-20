@@ -17,6 +17,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> GetById(int id)
         {
             var detalle = await repo.GetDetallesAsignatura(id);

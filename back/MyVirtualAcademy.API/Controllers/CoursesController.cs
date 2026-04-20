@@ -20,6 +20,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpGet]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> GetAll()
         {
             var cursos = await repo.GetCursosDetallesAsync();
