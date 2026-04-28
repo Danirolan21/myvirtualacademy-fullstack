@@ -24,5 +24,13 @@ namespace MyVirtualAcademy.API.Controllers
             await repo.CreateTemaAsync(request.IdAsignatura, request.Nombre, request.Orden);
             return Ok(new { message = "Tema creado correctamente" });
         }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var ok = await repo.DeleteTemaAsync(id);
+            if (!ok) return NotFound(new { message = "Módulo no encontrado" });
+            return Ok(new { message = "Módulo eliminado correctamente" });
+        }
     }
 }

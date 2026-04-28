@@ -6,3 +6,9 @@ export const getUser = (id: number) =>
 
 export const updateUser = (id: number, data: FormData) =>
   client.put(`/api/users/${id}`, data)
+
+export const getUsers = () =>
+  client.get<any[]>('/api/users')
+
+export const toggleUserActive = (id: number) =>
+  client.put(`/api/users/${id}/toggle-active`)

@@ -14,20 +14,22 @@ onMounted(async () => {
 
 <template>
   <div v-if="auth.isLoading" class="fullscreen-loader">
-    <div class="spinner-border text-light" role="status">
+    <div class="spinner" role="status">
       <span class="visually-hidden">Cargando...</span>
     </div>
   </div>
   <template v-else>
-    <AppNavBar />
-    <main role="main" class="pb-3">
-      <RouterView />
-    </main>
-    <footer class="border-top footer text-muted">
-      <div class="container">
-        &copy; 2025 - MyVirtualAcademy
-      </div>
-    </footer>
+    <div class="app-shell">
+      <AppNavBar />
+      <main class="app-main">
+        <RouterView />
+      </main>
+      <footer class="site-footer">
+        <div class="container">
+          &copy; 2025 - MyVirtualAcademy - <a href="#">Privacy</a>
+        </div>
+      </footer>
+    </div>
   </template>
 </template>
 
@@ -41,7 +43,20 @@ onMounted(async () => {
   justify-content: center;
   z-index: 9999;
 }
-.footer {
-  padding: 15px 0;
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.app-main {
+  flex: 1;
+}
+.site-footer {
+  margin-top: auto;
+  padding: var(--sp-4) 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  background: var(--color-surface);
 }
 </style>

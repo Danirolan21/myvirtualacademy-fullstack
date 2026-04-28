@@ -20,6 +20,23 @@ namespace MyVirtualAcademy.API.Controllers
             this.helperPath = helperPath;
         }
 
+        [HttpGet]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await repo.GetAllUsersWithRolesAsync();
+            return Ok(users);
+        }
+
+        [HttpPut("{id:int}/toggle-active")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> ToggleActive(int id)
+        {
+            var ok = await repo.ToggleUserActiveAsync(id);
+            if (!ok) return NotFound();
+            return Ok(new { message = "Estado del usuario actualizado" });
+        }
+
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetUser(int id)
         {
@@ -59,7 +76,7 @@ namespace MyVirtualAcademy.API.Controllers
             if (request.FotoPerfil != null)
             {
                 var ext = Path.GetExtension(request.FotoPerfil.FileName).ToLower();
-                string[] allowed = [".jpg", ".jpeg", ".png", ".gif"];
+                string[] allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
                 if (!allowed.Contains(ext))
                     return BadRequest(new { message = "Formato de imagen no permitido." });
 

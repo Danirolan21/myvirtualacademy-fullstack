@@ -7,7 +7,7 @@ namespace MyVirtualAcademy.Helper
     {
         public static string GenerateSalt()
         {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(50));
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(36)); // 48 chars base64, fits nvarchar(50)
         }
 
         public static bool CompararArrays(byte[] a, byte[] b)

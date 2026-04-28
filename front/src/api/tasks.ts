@@ -7,5 +7,5 @@ export const getTask = (id: number) =>
 export const submitTask = (id: number, data: FormData) =>
   client.post(`/api/tasks/${id}/submit`, data)
 
-export const gradeTask = (id: number, data: { idEntrega: number; calificacion: number; comentarios?: string }) =>
+export const gradeTask = (id: number, data: { idEntrega: number; idEstudiante: number; calificacion: number; comentarios?: string }) =>
   client.post(`/api/tasks/${id}/grade`, data)

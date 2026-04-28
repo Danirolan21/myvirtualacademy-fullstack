@@ -10,8 +10,13 @@ export const createContent = (data: FormData) =>
 export const updateContent = (id: number, data: FormData) =>
   client.put(`/api/content/${id}`, data)
 
-export const checkAccess = (id: number) =>
-  client.get<boolean>(`/api/content/${id}/access`)
+export const checkAccess = async (id: number): Promise<boolean> => {
+  const res = await client.get<{ hasAccess: boolean }>(`/api/content/${id}/access`)
+  return res.data.hasAccess
+}
 
 export const registerView = (id: number) =>
   client.post(`/api/content/${id}/view`)
+
+export const deleteContent = (id: number) =>
+  client.delete(`/api/content/${id}`)

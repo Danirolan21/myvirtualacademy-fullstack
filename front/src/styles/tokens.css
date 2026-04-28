@@ -1,0 +1,123 @@
+/* ─── FavoritMono (local, no CDN) ─── */
+@font-face {
+  font-family: 'FavoritMno';
+  src: url('/fonts/FavoritMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── Design Tokens ───────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Typography ── */
+  --font-sans: 'FavoritMno', ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: 'FavoritMno', ui-monospace, Menlo, Consolas, monospace;
+  --font-size-base: 16px;
+  --font-size-xs:   0.75rem;
+  --font-size-sm:   0.875rem;
+  --font-size-md:   1rem;
+  --font-size-lg:   1.125rem;
+  --font-size-xl:   1.25rem;
+  --font-size-2xl:  1.5rem;
+  --font-size-3xl:  1.875rem;
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --line-height-base: 1.5;
+  --line-height-tight: 1.3;
+
+  /* ── Color palette ── */
+  --color-black:      #000000;
+  --color-white:      #ffffff;
+  --color-page-bg:    #f0f0f0;
+  --color-surface:    #ffffff;
+  --color-border:     #dee2e6;
+  --color-muted:      #6c757d;
+  --color-muted-bg:   #f8f9fa;
+  --color-text:       #212529;
+  --color-text-light: #6c757d;
+
+  /* Primary — blue (generic actions) */
+  --color-primary:       #0d6efd;
+  --color-primary-hover: #0b5ed7;
+  --color-primary-text:  #ffffff;
+
+  /* Success — green (tasks, active states, save actions) */
+  --color-success:       #198754;
+  --color-success-hover: #157347;
+  --color-success-text:  #ffffff;
+  --color-success-light: #d1e7dd;
+
+  /* Danger — red */
+  --color-danger:       #dc3545;
+  --color-danger-hover: #bb2d3b;
+  --color-danger-text:  #ffffff;
+
+  /* Warning — amber */
+  --color-warning:      #ffc107;
+  --color-warning-text: #000000;
+
+  /* Info */
+  --color-info:      #0dcaf0;
+  --color-info-text: #000000;
+  --color-info-light: #cff4fc;
+
+  /* ── Status badge colors ── */
+  --badge-activo-bg:     #198754;
+  --badge-activo-text:   #fff;
+  --badge-borrador-bg:   #ffc107;
+  --badge-borrador-text: #000;
+  --badge-finalizado-bg: #17a2b8;
+  --badge-finalizado-text: #fff;
+  --badge-archivado-bg:  #343a40;
+  --badge-archivado-text: #fff;
+  --badge-suspendido-bg: #dc3545;
+  --badge-suspendido-text: #fff;
+  --badge-pendiente-bg:  #6c757d;
+  --badge-pendiente-text: #fff;
+  --badge-calificado-bg: #198754;
+  --badge-calificado-text: #fff;
+  --badge-tardia-bg:     #ffc107;
+  --badge-tardia-text:   #000;
+  --badge-tiempo-bg:     #198754;
+  --badge-tiempo-text:   #fff;
+
+  /* ── Navbar ── */
+  --navbar-bg:     #000000;
+  --navbar-text:   #ffffff;
+  --navbar-height: 70px;
+
+  /* ── Profile header ── */
+  --profile-header-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+
+  /* ── Spacing scale ── */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+  --sp-16: 4rem;
+
+  /* ── Border radius ── */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.375rem;
+  --radius-lg:   0.5rem;
+  --radius-xl:   0.75rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:    0 1px 8px rgba(0, 0, 0, 0.10);
+  --shadow-lg:    0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+  /* ── Layout ── */
+  --container-max: 1200px;
+  --container-padding: 1.5rem;
+}

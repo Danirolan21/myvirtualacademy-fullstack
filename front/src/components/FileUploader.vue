@@ -19,10 +19,16 @@ function handleChange(ev: Event) {
 </script>
 
 <template>
-  <div>
+  <div class="file-uploader">
     <label class="form-label">{{ label ?? 'Archivo' }}</label>
-    <input type="file" class="form-control" :accept="accept" @change="handleChange" />
-    <div v-if="error" class="text-danger small mt-1">{{ error }}</div>
-    <div class="form-text">Tamaño máximo: 10 MB</div>
+    <input type="file" class="form-control file-input" :accept="accept" @change="handleChange" />
+    <p v-if="error" class="file-error">{{ error }}</p>
+    <p class="form-text">Tamaño máximo: 10 MB</p>
   </div>
 </template>
+
+<style scoped>
+.file-uploader { display: flex; flex-direction: column; gap: var(--sp-1); }
+.file-input { padding: var(--sp-2); cursor: pointer; }
+.file-error { font-size: var(--font-size-xs); color: var(--color-danger); margin: 0; }
+</style>

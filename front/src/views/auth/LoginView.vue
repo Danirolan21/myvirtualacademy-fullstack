@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const error = ref('')
@@ -15,9 +16,16 @@ async function submit() {
   loading.value = true
   try {
     const user = await auth.login(email.value, password.value)
-    if (user.isAdmin) router.push('/admin')
-    else if (['Profesor', 'Tutor', 'Administrador'].includes(user.role)) router.push('/profesor')
-    else router.push('/estudiante')
+    const redirect = route.query.redirect as string | undefined
+    if (redirect) {
+      router.push(redirect)
+    } else if (user.isAdmin) {
+      router.push('/admin')
+    } else if (['Profesor', 'Tutor', 'Administrador'].includes(user.role)) {
+      router.push('/profesor')
+    } else {
+      router.push('/estudiante')
+    }
   } catch {
     error.value = 'Email o contraseña incorrectos.'
   } finally {
@@ -35,18 +43,17 @@ async function submit() {
           <div class="login-content">
             <h1 class="login-title">Iniciar Sesión</h1>
             <form @submit.prevent="submit">
-              <div class="form-floating mb-4">
+              <div class="field">
+                <label class="form-label" for="email">Email</label>
                 <input v-model="email" type="email" class="form-control" id="email" placeholder="Email" required />
-                <label for="email">Email</label>
               </div>
-              <div class="form-floating mb-4">
+              <div class="field">
+                <label class="form-label" for="password">Contraseña</label>
                 <input v-model="password" type="password" class="form-control" id="password" placeholder="Contraseña" required />
-                <label for="password">Contraseña</label>
               </div>
-              <button class="btn login-btn w-100 d-flex align-items-center justify-content-center" :disabled="loading">
-                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                <i v-else class="fas fa-sign-in-alt me-2"></i>
-                Iniciar Sesión
+              <button class="btn login-btn" :disabled="loading">
+                <span v-if="loading"><i class="fas fa-spinner fa-spin"></i> Cargando…</span>
+                <span v-else><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</span>
               </button>
             </form>
             <div v-if="error" class="system-message mt-3">
@@ -95,25 +102,37 @@ async function submit() {
   background: linear-gradient(45deg, #6c5ce7, #a29bfe);
   border-radius: 2px;
 }
-.form-floating .form-control {
-  height: 60px; border: none; background: #f7f9fc;
-  border-radius: 15px; padding: 12px 20px;
+.field {
+  margin-bottom: 1.25rem;
 }
-.form-floating .form-control:focus {
+.field .form-control {
+  height: 48px;
+  background: #f7f9fc;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0 1.25rem;
+}
+.field .form-control:focus {
   background: white;
   box-shadow: 0 5px 15px rgba(0,0,0,0.07);
-  border: 1px solid #dfe6e9;
+  border-color: #a29bfe;
 }
-.form-floating label { padding: 18px 20px; color: #636e72; }
 .login-btn {
-  height: 55px;
+  width: 100%;
+  height: 52px;
   background: linear-gradient(45deg, #6c5ce7, #a29bfe);
-  border-radius: 15px; color: white; font-weight: 600;
+  border-radius: 15px;
+  color: white;
+  font-weight: 600;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   box-shadow: 0 8px 15px rgba(108,92,231,0.25);
-  transition: all 0.3s;
+  transition: transform 0.2s;
 }
-.login-btn:hover { transform: translateY(-3px); }
+.login-btn:hover:not(:disabled) { transform: translateY(-2px); }
 .system-message {
   background: rgba(255,118,117,0.1);
   border-radius: 15px; padding: 20px;

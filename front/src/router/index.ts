@@ -28,7 +28,8 @@ const router = createRouter({
     { path: '/contenido/:id/documento', component: () => import('../views/content/DocumentDetailView.vue'), meta: { requiresAuth: true } },
     { path: '/contenido/:id/enlace', component: () => import('../views/content/LinkDetailView.vue'), meta: { requiresAuth: true } },
     { path: '/contenido/:id/examen', component: () => import('../views/content/ExamDetailView.vue'), meta: { requiresAuth: true } },
-    { path: '/:pathMatch(.*)*', redirect: '/' }
+    { path: '/calendario', component: () => import('../views/CalendarView.vue'), meta: { requiresAuth: true } },
+    { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') }
   ]
 })
 
@@ -41,13 +42,15 @@ router.beforeEach(async to => {
   }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return '/login'
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return auth.isAuthenticated ? '/' : '/login'
+    return auth.isAuthenticated ? '/' : { path: '/login', query: { redirect: to.fullPath } }
   }
-  if (to.meta.roles && !auth.isAuthenticated) {
-    return '/login'
+  if (to.meta.roles) {
+    if (!auth.isAuthenticated) return { path: '/login', query: { redirect: to.fullPath } }
+    const allowed = to.meta.roles as string[]
+    if (!allowed.includes(auth.role ?? '')) return '/'
   }
 })
 

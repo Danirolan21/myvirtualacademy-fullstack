@@ -1,76 +1,566 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { getCourses } from '../../api/courses'
-import type { VistaCursosDetalles } from '../../types'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
+import { getCourses, deleteCourse, getEnrollments, getAvailableStudents, enrollStudent, unenrollStudent } from '../../api/courses'
+import { getUsers, toggleUserActive } from '../../api/users'
+import { getRoles, register } from '../../api/auth'
+import type { VistaCursosDetalles, Rol } from '../../types'
 import CourseCard from '../../components/CourseCard.vue'
 import CourseEditModal from '../../components/CourseEditModal.vue'
 
+const route = useRoute()
+const router = useRouter()
+
+type Tab = 'cursos' | 'usuarios' | 'inscripciones'
+const activeTab = ref<Tab>((route.query.tab as Tab) ?? 'cursos')
+watch(activeTab, tab => router.replace({ query: { ...route.query, tab } }))
+
+// ===== CURSOS =====
 const courses = ref<VistaCursosDetalles[]>([])
-const loading = ref(true)
+const loadingCourses = ref(false)
 const editingId = ref<number | null>(null)
 
-async function load() {
-  loading.value = true
+async function loadCourses() {
+  loadingCourses.value = true
   try {
     const res = await getCourses()
     courses.value = res.data
   } finally {
-    loading.value = false
+    loadingCourses.value = false
   }
 }
 
-onMounted(load)
+async function onOptions(id: number) {
+  const curso = courses.value.find(c => c.idCurso === id)
+  const result = await Swal.fire({
+    title: curso?.nombreCurso ?? 'Curso',
+    text: '¿Qué deseas hacer con este curso?',
+    icon: 'question',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Editar',
+    denyButtonText: 'Eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#0d6efd',
+    denyButtonColor: '#dc3545',
+  })
+  if (result.isConfirmed) {
+    editingId.value = id
+  } else if (result.isDenied) {
+    const confirm = await Swal.fire({
+      title: '¿Eliminar curso?',
+      text: '¿Seguro que quieres eliminar este curso? Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc3545',
+    })
+    if (confirm.isConfirmed) {
+      await deleteCourse(id)
+      await loadCourses()
+    }
+  }
+}
 
 function onSaved() {
   editingId.value = null
-  load()
+  loadCourses()
 }
+
+// ===== USUARIOS =====
+const users = ref<any[]>([])
+const loadingUsers = ref(false)
+const roles = ref<Rol[]>([])
+const showRegisterPanel = ref(false)
+const regForm = ref({ nombre: '', apellidos: '', email: '', password: '', idRol: 0 })
+const regMensaje = ref('')
+const regError = ref('')
+const regSaving = ref(false)
+
+async function loadUsers() {
+  loadingUsers.value = true
+  try {
+    const res = await getUsers()
+    users.value = res.data
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+async function loadRoles() {
+  if (roles.value.length) return
+  const res = await getRoles()
+  roles.value = res.data
+  if (roles.value.length && !regForm.value.idRol)
+    regForm.value.idRol = roles.value[0].idRol
+}
+
+async function handleToggleActive(idUsuario: number) {
+  await toggleUserActive(idUsuario)
+  await loadUsers()
+}
+
+async function submitRegister() {
+  regError.value = ''
+  regMensaje.value = ''
+  regSaving.value = true
+  try {
+    await register(regForm.value)
+    regMensaje.value = `Usuario ${regForm.value.nombre} ${regForm.value.apellidos} registrado correctamente.`
+    regForm.value = { nombre: '', apellidos: '', email: '', password: '', idRol: roles.value[0]?.idRol ?? 0 }
+    await loadUsers()
+  } catch {
+    regError.value = 'Error al registrar el usuario. Comprueba que el email no está en uso.'
+  } finally {
+    regSaving.value = false
+  }
+}
+
+// ===== INSCRIPCIONES =====
+const selectedCourseId = ref<number | null>(null)
+const enrollments = ref<any[]>([])
+const availableStudents = ref<any[]>([])
+const loadingEnrollments = ref(false)
+const showEnrollModal = ref(false)
+const enrollStudentId = ref(0)
+const enrolling = ref(false)
+
+async function loadEnrollments() {
+  if (!selectedCourseId.value) return
+  loadingEnrollments.value = true
+  try {
+    const [enrRes, avRes] = await Promise.all([
+      getEnrollments(selectedCourseId.value),
+      getAvailableStudents(selectedCourseId.value),
+    ])
+    enrollments.value = enrRes.data
+    availableStudents.value = avRes.data
+  } finally {
+    loadingEnrollments.value = false
+  }
+}
+
+watch(selectedCourseId, loadEnrollments)
+
+async function handleUnenroll(idEstudiante: number, nombre: string) {
+  const result = await Swal.fire({
+    title: `¿Desinscribir a ${nombre}?`,
+    text: 'El estudiante perderá acceso al curso.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, desinscribir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc3545',
+  })
+  if (!result.isConfirmed) return
+  await unenrollStudent(selectedCourseId.value!, idEstudiante)
+  await loadEnrollments()
+}
+
+async function handleEnroll() {
+  if (!enrollStudentId.value || !selectedCourseId.value) return
+  enrolling.value = true
+  try {
+    await enrollStudent(selectedCourseId.value, enrollStudentId.value)
+    showEnrollModal.value = false
+    enrollStudentId.value = 0
+    await loadEnrollments()
+  } finally {
+    enrolling.value = false
+  }
+}
+
+// ===== INIT =====
+onMounted(async () => {
+  await loadCourses()
+  if (activeTab.value === 'usuarios') { await loadUsers(); await loadRoles() }
+  if (activeTab.value === 'inscripciones' && courses.value.length) {
+    selectedCourseId.value = courses.value[0].idCurso
+  }
+})
+
+watch(activeTab, async tab => {
+  if (tab === 'usuarios') { await loadUsers(); await loadRoles() }
+  if (tab === 'inscripciones' && courses.value.length && !selectedCourseId.value) {
+    selectedCourseId.value = courses.value[0].idCurso
+  }
+})
 </script>
 
 <template>
-  <main class="container">
-    <div class="tabs justify-content-between">
-      <div class="tab active">Cursos</div>
-      <RouterLink to="/admin/cursos/crear" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Crear Nuevo Curso
-      </RouterLink>
-    </div>
+  <div class="page">
+    <div class="container">
 
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border"></div>
+      <!-- Page header -->
+      <div class="page-header">
+        <div class="page-tabs">
+          <span class="page-tab" :class="{ active: activeTab === 'cursos' }" @click="activeTab = 'cursos'">
+            <i class="fas fa-graduation-cap"></i> Cursos
+          </span>
+          <span class="page-tab" :class="{ active: activeTab === 'usuarios' }" @click="activeTab = 'usuarios'">
+            <i class="fas fa-users"></i> Usuarios
+          </span>
+          <span class="page-tab" :class="{ active: activeTab === 'inscripciones' }" @click="activeTab = 'inscripciones'">
+            <i class="fas fa-user-plus"></i> Inscripciones
+          </span>
+        </div>
+
+        <div class="header-actions">
+          <RouterLink v-if="activeTab === 'cursos'" to="/admin/cursos/crear" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Crear Curso
+          </RouterLink>
+          <button v-if="activeTab === 'usuarios'" class="btn btn-primary" @click="showRegisterPanel = !showRegisterPanel">
+            <i class="fas fa-user-plus"></i> Nuevo Usuario
+          </button>
+          <button v-if="activeTab === 'inscripciones' && selectedCourseId" class="btn btn-primary" @click="showEnrollModal = true">
+            <i class="fas fa-user-plus"></i> Inscribir Estudiante
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== TAB CURSOS ===== -->
+      <template v-if="activeTab === 'cursos'">
+        <div v-if="loadingCourses" class="loading-center"><div class="spinner"></div></div>
+        <div v-else-if="courses.length" class="courses-grid">
+          <CourseCard
+            v-for="curso in courses"
+            :key="curso.idCurso"
+            :curso="curso"
+            :admin-mode="true"
+            @options="onOptions"
+          />
+        </div>
+        <div v-else class="empty-state">
+          <i class="fas fa-graduation-cap empty-icon"></i>
+          <p>Aún no hay cursos creados.</p>
+          <RouterLink to="/admin/cursos/crear" class="btn btn-primary">Crear primer curso</RouterLink>
+        </div>
+      </template>
+
+      <!-- ===== TAB USUARIOS ===== -->
+      <template v-else-if="activeTab === 'usuarios'">
+        <!-- Register panel -->
+        <div v-if="showRegisterPanel" class="register-panel">
+          <h3 class="register-title">Nuevo usuario</h3>
+          <div class="reg-form-grid">
+            <div class="field">
+              <label class="form-label">Nombre</label>
+              <input v-model="regForm.nombre" type="text" class="form-control" required />
+            </div>
+            <div class="field">
+              <label class="form-label">Apellidos</label>
+              <input v-model="regForm.apellidos" type="text" class="form-control" required />
+            </div>
+            <div class="field">
+              <label class="form-label">Email</label>
+              <input v-model="regForm.email" type="email" class="form-control" required />
+            </div>
+            <div class="field">
+              <label class="form-label">Contraseña</label>
+              <input v-model="regForm.password" type="password" class="form-control" required />
+            </div>
+          </div>
+          <div class="field mt-2">
+            <label class="form-label">Rol</label>
+            <div class="role-group">
+              <button v-for="rol in roles" :key="rol.idRol" type="button" class="role-btn"
+                :class="{ active: regForm.idRol === rol.idRol }" @click="regForm.idRol = rol.idRol">
+                {{ rol.nombre }}
+              </button>
+            </div>
+          </div>
+          <div class="reg-actions">
+            <button class="btn btn-outline-secondary" @click="showRegisterPanel = false">Cancelar</button>
+            <button class="btn btn-success" @click="submitRegister" :disabled="regSaving">
+              <span v-if="regSaving"><i class="fas fa-spinner fa-spin"></i> Registrando…</span>
+              <span v-else><i class="fas fa-user-plus"></i> Registrar</span>
+            </button>
+          </div>
+          <p v-if="regMensaje" class="feedback feedback-success">{{ regMensaje }}</p>
+          <p v-if="regError" class="feedback feedback-error">{{ regError }}</p>
+        </div>
+
+        <div v-if="loadingUsers" class="loading-center"><div class="spinner"></div></div>
+        <div v-else-if="users.length" class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="u in users" :key="u.idUsuario">
+                <td class="user-name-cell">
+                  <div class="user-av">{{ u.nombre?.[0] }}</div>
+                  <span>{{ u.nombre }} {{ u.apellidos }}</span>
+                </td>
+                <td>{{ u.email }}</td>
+                <td><span class="badge badge-role">{{ u.rol }}</span></td>
+                <td>
+                  <span class="badge" :class="u.activo ? 'badge-activo' : 'badge-secondary'">
+                    {{ u.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm" :class="u.activo ? 'btn-outline-danger' : 'btn-success'"
+                    @click="handleToggleActive(u.idUsuario)">
+                    {{ u.activo ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="empty-state">
+          <i class="fas fa-users empty-icon"></i>
+          <p>No hay usuarios registrados.</p>
+        </div>
+      </template>
+
+      <!-- ===== TAB INSCRIPCIONES ===== -->
+      <template v-else-if="activeTab === 'inscripciones'">
+        <div class="enroll-filter">
+          <label class="form-label">Selecciona un curso</label>
+          <select v-model="selectedCourseId" class="form-control enroll-select">
+            <option v-for="c in courses" :key="c.idCurso" :value="c.idCurso">{{ c.nombreCurso }}</option>
+          </select>
+        </div>
+
+        <div v-if="loadingEnrollments" class="loading-center"><div class="spinner"></div></div>
+        <div v-else-if="selectedCourseId">
+          <div v-if="enrollments.length" class="users-table-wrap">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Estudiante</th>
+                  <th>Email</th>
+                  <th>Fecha inscripción</th>
+                  <th>Progreso</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="e in enrollments" :key="e.idInscripcion">
+                  <td class="user-name-cell">
+                    <div class="user-av">{{ e.nombreEstudiante?.[0] }}</div>
+                    <span>{{ e.nombreEstudiante }}</span>
+                  </td>
+                  <td>{{ e.email }}</td>
+                  <td>{{ e.fechaInscripcion ? new Date(e.fechaInscripcion).toLocaleDateString('es-ES') : '—' }}</td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-bar">
+                        <div class="progress-fill" :style="{ width: `${e.porcentajeCompletado ?? 0}%` }"></div>
+                      </div>
+                      <span class="progress-text">{{ Math.round(e.porcentajeCompletado ?? 0) }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger" @click="handleUnenroll(e.idEstudiante, e.nombreEstudiante)">
+                      Desinscribir
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty-state">
+            <i class="fas fa-user-slash empty-icon"></i>
+            <p>No hay estudiantes inscritos en este curso.</p>
+          </div>
+        </div>
+      </template>
+
     </div>
-    <div v-else-if="courses.length" class="courses-grid mt-3">
-      <CourseCard
-        v-for="curso in courses"
-        :key="curso.idCurso"
-        :curso="curso"
-        :admin-mode="true"
-        @options="id => editingId = id"
-      />
-    </div>
-    <div v-else class="course-content-container">
-      <div class="add-content-container">
-        <p class="add-content-text">Aún no hay cursos creados.</p>
+  </div>
+
+  <CourseEditModal :id-curso="editingId" @saved="onSaved" @close="editingId = null" />
+
+  <!-- Modal inscribir estudiante -->
+  <Teleport to="body">
+    <div v-if="showEnrollModal" class="modal-overlay" @mousedown.self="showEnrollModal = false">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fas fa-user-plus"></i> Inscribir Estudiante</h5>
+          <button class="modal-close" @click="showEnrollModal = false"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label class="form-label">Selecciona un estudiante</label>
+            <select v-model="enrollStudentId" class="form-control">
+              <option value="0" disabled>— Elige un estudiante —</option>
+              <option v-for="s in availableStudents" :key="s.idUsuario" :value="s.idUsuario">
+                {{ s.nombre }} {{ s.apellidos }} ({{ s.email }})
+              </option>
+            </select>
+          </div>
+          <p v-if="!availableStudents.length" class="text-muted">Todos los estudiantes ya están inscritos en este curso.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" @click="showEnrollModal = false">Cancelar</button>
+          <button class="btn btn-primary" :disabled="!enrollStudentId || enrolling" @click="handleEnroll">
+            <span v-if="enrolling"><i class="fas fa-spinner fa-spin"></i> Inscribiendo…</span>
+            <span v-else>Inscribir</span>
+          </button>
+        </div>
       </div>
     </div>
-
-    <CourseEditModal :id-curso="editingId" @saved="onSaved" @close="editingId = null" />
-  </main>
+  </Teleport>
 </template>
 
 <style scoped>
-.tabs {
+.page-header {
   display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 1.5rem;
   align-items: center;
-  padding: 1rem 0 0;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--sp-6);
+  flex-wrap: wrap;
+  gap: var(--sp-3);
 }
-.tab { padding: 0.75rem 1.25rem; font-weight: 500; border-bottom: 2px solid black; }
+
+.page-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: -2px;
+}
+
+.page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.page-tab.active {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  border-bottom-color: var(--color-black);
+}
+
+.header-actions { display: flex; gap: var(--sp-2); }
+
 .courses-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-6);
+}
+
+.loading-center { display: flex; justify-content: center; padding: var(--sp-12) 0; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-4); padding: var(--sp-16) 0; color: var(--color-muted); text-align: center;
+}
+.empty-icon { font-size: 3rem; opacity: 0.3; }
+.empty-state p { margin: 0; font-size: var(--font-size-lg); }
+
+/* Register panel */
+.register-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  margin-bottom: var(--sp-6);
+}
+.register-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--sp-5);
+}
+.reg-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+.field { display: flex; flex-direction: column; gap: var(--sp-1); }
+.mt-2 { margin-top: var(--sp-2); }
+.role-group { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.role-btn {
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.role-btn.active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+.reg-actions { display: flex; gap: var(--sp-3); justify-content: flex-end; margin-top: var(--sp-5); }
+.feedback { margin-top: var(--sp-3); font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); }
+.feedback-success { color: var(--color-success); }
+.feedback-error { color: var(--color-danger); }
+
+/* Users table */
+.users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.users-table th {
+  background: var(--color-muted-bg);
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  border-bottom: 1px solid var(--color-border);
+}
+.users-table td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.users-table tr:last-child td { border-bottom: none; }
+.users-table tr:hover td { background: var(--color-muted-bg); }
+
+.user-name-cell { display: flex; align-items: center; gap: var(--sp-3); }
+.user-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-primary); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+  flex-shrink: 0; text-transform: uppercase;
+}
+
+.badge-role { background: #e0e7ff; color: #4338ca; }
+
+/* Enrollments */
+.enroll-filter { margin-bottom: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-1); max-width: 400px; }
+.enroll-select { max-width: 400px; }
+
+.progress-wrap { display: flex; align-items: center; gap: var(--sp-2); }
+.progress-bar { flex: 1; height: 8px; background: var(--color-border); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--color-primary); border-radius: 999px; transition: width 0.3s; }
+.progress-text { font-size: var(--font-size-xs); color: var(--color-muted); white-space: nowrap; }
+
+.text-muted { color: var(--color-muted); font-size: var(--font-size-sm); }
+
+/* Modal */
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-5) var(--sp-6); border-bottom: 1px solid var(--color-border); }
+.modal-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin: 0; display: flex; align-items: center; gap: var(--sp-2); }
+.modal-close { background: none; border: none; font-size: var(--font-size-md); cursor: pointer; color: var(--color-muted); padding: var(--sp-1); }
+.modal-body { padding: var(--sp-5) var(--sp-6); }
+.modal-footer { display: flex; justify-content: flex-end; gap: var(--sp-3); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--color-border); }
+
+@media (max-width: 640px) {
+  .reg-form-grid { grid-template-columns: 1fr; }
 }
 </style>

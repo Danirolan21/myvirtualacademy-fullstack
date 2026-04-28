@@ -137,6 +137,8 @@ export interface RecursoViewModel {
   descripcion?: string
   urlContenido: string
   fechaPublicacion: string
+  fechaEntrega?: string
+  puntuacionMaxima?: number
   tipo: string
   idTema: number
   nombreTema: string

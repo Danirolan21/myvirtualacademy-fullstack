@@ -26,7 +26,21 @@ namespace MyVirtualAcademy.API.Controllers
         {
             var contenido = await repo.ObtenerContenidoPorIdAsync(id);
             if (contenido == null) return NotFound();
-            return Ok(contenido);
+            return Ok(new
+            {
+                contenido.IdContenido,
+                contenido.Titulo,
+                contenido.Descripcion,
+                contenido.Tipo,
+                UrlContenido = contenido.URLContenido,
+                contenido.FechaPublicacion,
+                contenido.FechaEntrega,
+                contenido.PuntuacionMaxima,
+                contenido.IdTema,
+                NombreTema = contenido.Tema?.Nombre,
+                IdAsignatura = contenido.Tema?.IdAsignatura,
+                NombreAsignatura = contenido.Tema?.Asignatura?.Nombre,
+            });
         }
 
         [HttpGet("{id:int}/access")]
@@ -109,6 +123,15 @@ namespace MyVirtualAcademy.API.Controllers
             var ok = await repo.ActualizarTareaAsync(id, model, urlContenido);
             if (!ok) return NotFound();
             return Ok(new { message = "Contenido actualizado" });
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Policy = "ProfesorUTutor")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var ok = await repo.DeleteContenidoAsync(id);
+            if (!ok) return NotFound(new { message = "Contenido no encontrado" });
+            return Ok(new { message = "Contenido eliminado correctamente" });
         }
 
         public record CreateContentRequest(

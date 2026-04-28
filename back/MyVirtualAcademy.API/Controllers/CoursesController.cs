@@ -7,7 +7,7 @@ namespace MyVirtualAcademy.API.Controllers
 {
     [ApiController]
     [Route("api/courses")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize]
     public class CoursesController : ControllerBase
     {
         private readonly RepositoryMyVirtualAcademy repo;
@@ -20,6 +20,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "AdminOnly")]
         [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> GetAll()
         {
@@ -27,7 +28,16 @@ namespace MyVirtualAcademy.API.Controllers
             return Ok(cursos);
         }
 
+        [HttpGet("by-professor/{profesorId:int}")]
+        [Authorize(Policy = "ProfesorUTutor")]
+        public async Task<IActionResult> ByProfessor(int profesorId)
+        {
+            var cursos = await repo.GetCursosByProfesorAsync(profesorId);
+            return Ok(cursos);
+        }
+
         [HttpGet("{id:int}")]
+        [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> GetById(int id)
         {
             var curso = await repo.GetDetallesCursoAsync(id);
@@ -58,6 +68,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "AdminOnly")]
         [RequestSizeLimit(10_485_760)]
         public async Task<IActionResult> Create([FromForm] CreateCourseRequest request)
         {
@@ -78,6 +89,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = "AdminOnly")]
         [RequestSizeLimit(10_485_760)]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateCourseRequest request)
         {
@@ -98,6 +110,51 @@ namespace MyVirtualAcademy.API.Controllers
             if (!ok) return NotFound(new { message = "Curso no encontrado" });
             return Ok(new { success = true });
         }
+
+        [HttpGet("{id:int}/enrollments")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetEnrollments(int id)
+        {
+            var enrollments = await repo.GetEnrollmentsByCourseAsync(id);
+            return Ok(enrollments);
+        }
+
+        [HttpGet("{id:int}/enrollments/available")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetAvailableStudents(int id)
+        {
+            var students = await repo.GetAvailableStudentsForCourseAsync(id);
+            return Ok(students);
+        }
+
+        [HttpPost("{id:int}/enrollments")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Enroll(int id, [FromBody] EnrollRequest request)
+        {
+            var ok = await repo.EnrollStudentAsync(id, request.IdEstudiante);
+            if (!ok) return BadRequest(new { message = "El estudiante ya está inscrito en este curso." });
+            return Ok(new { message = "Estudiante inscrito correctamente" });
+        }
+
+        [HttpDelete("{id:int}/enrollments/{idEstudiante:int}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Unenroll(int id, int idEstudiante)
+        {
+            var ok = await repo.UnenrollStudentAsync(id, idEstudiante);
+            if (!ok) return NotFound(new { message = "Inscripción no encontrada" });
+            return Ok(new { message = "Estudiante desinscrito correctamente" });
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var ok = await repo.DeleteCourseAsync(id);
+            if (!ok) return NotFound(new { message = "Curso no encontrado" });
+            return Ok(new { message = "Curso eliminado correctamente" });
+        }
+
+        public record EnrollRequest(int IdEstudiante);
 
         public record CreateCourseRequest(
             string Nombre,

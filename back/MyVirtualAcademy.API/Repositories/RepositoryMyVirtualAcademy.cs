@@ -156,16 +156,111 @@ namespace MyVirtualAcademy.Repositories
 
         #region AREA PERSONAL ADMIN
 
+        public async Task<List<VistaUsuariosConRoles>> GetAllUsersWithRolesAsync()
+        {
+            return await this.context.VistaUsuariosConRoles.ToListAsync();
+        }
+
+        public async Task<bool> ToggleUserActiveAsync(int idUsuario)
+        {
+            var user = await this.context.Usuarios.FindAsync(idUsuario);
+            if (user == null) return false;
+            user.Activo = !user.Activo;
+            await this.context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<object>> GetEnrollmentsByCourseAsync(int idCurso)
+        {
+            var enrollments = await this.context.Inscripciones
+                .Where(i => i.IdCurso == idCurso && i.Estado == "Activo")
+                .Include(i => i.Estudiante)
+                .Select(i => new
+                {
+                    i.IdInscripcion,
+                    i.IdEstudiante,
+                    NombreEstudiante = i.Estudiante.Nombre + " " + i.Estudiante.Apellidos,
+                    i.Estudiante.Email,
+                    i.FechaInscripcion,
+                    i.PorcentajeCompletado,
+                    i.RolInscrito
+                })
+                .ToListAsync();
+            return enrollments.Cast<object>().ToList();
+        }
+
+        public async Task<List<VistaUsuariosConRoles>> GetAvailableStudentsForCourseAsync(int idCurso)
+        {
+            var enrolledIds = await this.context.Inscripciones
+                .Where(i => i.IdCurso == idCurso && i.Estado == "Activo")
+                .Select(i => i.IdEstudiante)
+                .ToListAsync();
+
+            return await this.context.VistaUsuariosConRoles
+                .Where(u => u.Rol == "Estudiante" && !enrolledIds.Contains(u.IdUsuario))
+                .ToListAsync();
+        }
+
+        public async Task<bool> EnrollStudentAsync(int idCurso, int idEstudiante)
+        {
+            var existing = await this.context.Inscripciones
+                .FirstOrDefaultAsync(i => i.IdCurso == idCurso && i.IdEstudiante == idEstudiante);
+            if (existing != null)
+            {
+                if (existing.Estado == "Activo") return false;
+                existing.Estado = "Activo";
+                await this.context.SaveChangesAsync();
+                return true;
+            }
+
+            int newId = await this.context.Inscripciones.AnyAsync()
+                ? await this.context.Inscripciones.MaxAsync(i => i.IdInscripcion) + 1
+                : 1;
+
+            this.context.Inscripciones.Add(new Inscripcion
+            {
+                IdInscripcion = newId,
+                IdCurso = idCurso,
+                IdEstudiante = idEstudiante,
+                FechaInscripcion = DateTime.Now,
+                Estado = "Activo",
+                RolInscrito = "Estudiante",
+                PorcentajeCompletado = 0
+            });
+            await this.context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UnenrollStudentAsync(int idCurso, int idEstudiante)
+        {
+            var inscripcion = await this.context.Inscripciones
+                .FirstOrDefaultAsync(i => i.IdCurso == idCurso && i.IdEstudiante == idEstudiante && i.Estado == "Activo");
+            if (inscripcion == null) return false;
+            inscripcion.Estado = "Inactivo";
+            await this.context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<List<VistaCursosDetalles>> GetCursosDetallesAsync()
         {
-            var consulta = from datos in this.context.VistaCursosDetalles
-                           select datos;
-            return await consulta.ToListAsync();
+            return await this.context.VistaCursosDetalles
+                .Where(c => c.Estado != "Eliminado")
+                .ToListAsync();
         }
+
         public async Task<VistaCursosDetalles> GetDetallesCursoAsync(int idCurso)
         {
             return await this.context.VistaCursosDetalles
-                                 .FirstOrDefaultAsync(c => c.IdCurso == idCurso);
+                .FirstOrDefaultAsync(c => c.IdCurso == idCurso && c.Estado != "Eliminado");
+        }
+
+        public async Task<bool> DeleteCourseAsync(int idCurso)
+        {
+            var curso = await this.context.Cursos.FindAsync(idCurso);
+            if (curso == null) return false;
+            curso.Estado = "Eliminado";
+            await this.context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<List<Asignatura>> GetAsignaturasPorCursoAsync(int idCurso)
@@ -327,6 +422,73 @@ namespace MyVirtualAcademy.Repositories
             tema.Orden = Orden;
             await this.context.Temas.AddAsync(tema);
             await this.context.SaveChangesAsync();
+        }
+
+        public async Task<bool> DeleteTemaAsync(int idTema)
+        {
+            var tema = await this.context.Temas
+                .Include(t => t.Contenidos)
+                .FirstOrDefaultAsync(t => t.IdTema == idTema);
+            if (tema == null) return false;
+
+            using var tx = await this.context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var c in tema.Contenidos.ToList())
+                    await DeleteContenidoCascadeAsync(c.IdContenido);
+
+                this.context.Temas.Remove(tema);
+                await this.context.SaveChangesAsync();
+                await tx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteContenidoAsync(int idContenido)
+        {
+            using var tx = await this.context.Database.BeginTransactionAsync();
+            try
+            {
+                var ok = await DeleteContenidoCascadeAsync(idContenido);
+                if (!ok) { await tx.RollbackAsync(); return false; }
+                await tx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+        }
+
+        private async Task<bool> DeleteContenidoCascadeAsync(int idContenido)
+        {
+            var contenido = await this.context.Contenidos.FindAsync(idContenido);
+            if (contenido == null) return false;
+
+            var progreso = this.context.ProgresoInscripciones.Where(p => p.IdContenido == idContenido);
+            this.context.ProgresoInscripciones.RemoveRange(progreso);
+
+            var calificaciones = this.context.HistorialCalificaciones.Where(h => h.IdContenido == idContenido);
+            var calIds = await calificaciones.Select(h => h.IdCalificacion).ToListAsync();
+            var comentarios = this.context.ComentariosCalificaciones.Where(c => calIds.Contains(c.IdCalificacion));
+            this.context.ComentariosCalificaciones.RemoveRange(comentarios);
+            this.context.HistorialCalificaciones.RemoveRange(calificaciones);
+
+            var entregas = this.context.EntregasTareas.Where(e => e.IdContenido == idContenido);
+            this.context.EntregasTareas.RemoveRange(entregas);
+
+            var examenes = this.context.Examenes.Where(e => e.IdContenido == idContenido);
+            this.context.Examenes.RemoveRange(examenes);
+
+            this.context.Contenidos.Remove(contenido);
+            await this.context.SaveChangesAsync();
+            return true;
         }
 
         private async Task<int> GetMaxIdContenidoAsync()
@@ -1016,6 +1178,103 @@ namespace MyVirtualAcademy.Repositories
             // Actualizar porcentaje en la inscripción
             inscripcion.PorcentajeCompletado = porcentaje;
             await this.context.SaveChangesAsync();
+        }
+
+        #endregion
+
+        #region CALENDARIO
+
+        public async Task<List<object>> GetCalendarEventsAsync(int idUsuario, string role)
+        {
+            var events = new List<object>();
+
+            if (role == "Estudiante")
+            {
+                var inscripciones = await this.context.Inscripciones
+                    .Where(i => i.IdEstudiante == idUsuario && i.Estado == "Activo")
+                    .Include(i => i.Curso)
+                    .ToListAsync();
+
+                foreach (var ins in inscripciones)
+                {
+                    events.Add(new
+                    {
+                        fecha = ins.Curso.FechaInicio.ToString("yyyy-MM-dd"),
+                        tipo = "inicio_curso",
+                        titulo = ins.Curso.Nombre,
+                        idCurso = ins.Curso.IdCurso
+                    });
+                    events.Add(new
+                    {
+                        fecha = ins.Curso.FechaFin.ToString("yyyy-MM-dd"),
+                        tipo = "fin_curso",
+                        titulo = ins.Curso.Nombre,
+                        idCurso = ins.Curso.IdCurso
+                    });
+
+                    var asignaturaIds = await this.context.Asignaturas
+                        .Where(a => a.IdCurso == ins.IdCurso)
+                        .Select(a => a.IdAsignatura)
+                        .ToListAsync();
+
+                    var tareas = await this.context.Contenidos
+                        .Where(c => asignaturaIds.Contains(c.Tema.IdAsignatura)
+                                    && c.FechaEntrega != null
+                                    && (c.Tipo == "Tarea" || c.Tipo == "Quiz" || c.Tipo == "Examen"))
+                        .ToListAsync();
+
+                    foreach (var t in tareas)
+                    {
+                        events.Add(new
+                        {
+                            fecha = t.FechaEntrega!.Value.ToString("yyyy-MM-dd"),
+                            tipo = "entrega",
+                            titulo = t.Titulo,
+                            idCurso = ins.Curso.IdCurso
+                        });
+                    }
+                }
+            }
+            else
+            {
+                var asignaturaIds = await this.context.ProfesoresAsignaturas
+                    .Where(pa => pa.IdProfesor == idUsuario)
+                    .Select(pa => pa.IdAsignatura)
+                    .ToListAsync();
+
+                var cursoIds = await this.context.Asignaturas
+                    .Where(a => asignaturaIds.Contains(a.IdAsignatura))
+                    .Select(a => a.IdCurso)
+                    .Distinct()
+                    .ToListAsync();
+
+                var cursos = await this.context.Cursos
+                    .Where(c => cursoIds.Contains(c.IdCurso) && c.Estado != "Eliminado")
+                    .ToListAsync();
+
+                foreach (var c in cursos)
+                {
+                    events.Add(new { fecha = c.FechaInicio.ToString("yyyy-MM-dd"), tipo = "inicio_curso", titulo = c.Nombre, idCurso = c.IdCurso });
+                    events.Add(new { fecha = c.FechaFin.ToString("yyyy-MM-dd"), tipo = "fin_curso", titulo = c.Nombre, idCurso = c.IdCurso });
+                }
+
+                var tareas = await this.context.Contenidos
+                    .Where(ct => asignaturaIds.Contains(ct.Tema.IdAsignatura)
+                                && ct.FechaEntrega != null
+                                && (ct.Tipo == "Tarea" || ct.Tipo == "Quiz" || ct.Tipo == "Examen"))
+                    .ToListAsync();
+
+                foreach (var t in tareas)
+                {
+                    var idCurso = await this.context.Asignaturas
+                        .Where(a => a.IdAsignatura == t.Tema.IdAsignatura)
+                        .Select(a => a.IdCurso)
+                        .FirstOrDefaultAsync();
+                    events.Add(new { fecha = t.FechaEntrega!.Value.ToString("yyyy-MM-dd"), tipo = "entrega", titulo = t.Titulo, idCurso });
+                }
+            }
+
+            return events;
         }
 
         #endregion
