@@ -1,20 +1,51 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getCourse } from '../../api/courses'
+import { getCourse, getEnrollments } from '../../api/courses'
 import { formatDate } from '../../utils/format'
+import type { CourseDetailResponse, Inscripcion } from '../../types'
 
 const route = useRoute()
-const curso = ref<any>(null)
+const curso = ref<CourseDetailResponse | null>(null)
 const loading = ref(true)
+const error = ref(false)
 const activeTab = ref<'asignaturas' | 'alumnos' | 'evaluacion' | 'configuracion'>('asignaturas')
 
-onMounted(async () => {
+const enrollments = ref<Inscripcion[]>([])
+const loadingEnrollments = ref(false)
+const errorEnrollments = ref(false)
+
+async function load() {
+  loading.value = true
+  error.value = false
   try {
     const res = await getCourse(Number(route.params.id))
     curso.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
+  }
+}
+
+async function loadEnrollments() {
+  loadingEnrollments.value = true
+  errorEnrollments.value = false
+  try {
+    const res = await getEnrollments(Number(route.params.id))
+    enrollments.value = res.data
+  } catch {
+    errorEnrollments.value = true
+  } finally {
+    loadingEnrollments.value = false
+  }
+}
+
+onMounted(load)
+
+watch(activeTab, tab => {
+  if (tab === 'alumnos' && !enrollments.value.length && !loadingEnrollments.value) {
+    loadEnrollments()
   }
 })
 
@@ -30,6 +61,12 @@ const statusClass: Record<string, string> = {
 
       <div v-if="loading" class="loading-center"><div class="spinner"></div></div>
 
+      <div v-else-if="error" class="error-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Error al cargar los datos del curso. Inténtalo de nuevo.</p>
+        <button class="btn btn-primary" @click="load">Reintentar</button>
+      </div>
+
       <template v-else-if="curso">
         <!-- Back link -->
         <RouterLink to="/admin" class="back-link">
@@ -42,11 +79,11 @@ const statusClass: Record<string, string> = {
             <span class="badge" :class="statusClass[curso.curso?.estado ?? 'Borrador']">
               {{ curso.curso?.estado ?? 'Borrador' }}
             </span>
-            <h1 class="header-title">{{ curso.curso?.nombreCurso ?? curso.nombreCurso }}</h1>
+            <h1 class="header-title">{{ curso.curso?.nombreCurso ?? (curso as any).nombreCurso }}</h1>
           </div>
           <div class="header-meta">
-            <span><i class="fas fa-user"></i> {{ curso.curso?.nombreProfesor ?? curso.nombreProfesor }}</span>
-            <span><i class="fas fa-calendar-alt"></i> Inicio: {{ formatDate(curso.curso?.fechaInicio ?? curso.fechaInicio) }}</span>
+            <span><i class="fas fa-user"></i> {{ curso.curso?.nombreProfesor ?? (curso as any).nombreProfesor }}</span>
+            <span><i class="fas fa-calendar-alt"></i> Inicio: {{ formatDate(curso.curso?.fechaInicio ?? (curso as any).fechaInicio) }}</span>
             <span><i class="fas fa-book-open"></i> Asignaturas: {{ curso.asignaturas?.length ?? 0 }}</span>
             <span><i class="fas fa-users"></i> Alumnos: {{ curso.curso?.numeroAlumnos ?? 0 }}</span>
           </div>
@@ -77,17 +114,70 @@ const statusClass: Record<string, string> = {
               <i class="fas fa-arrow-right subject-arrow"></i>
             </RouterLink>
           </div>
-          <div v-else class="empty-tab">No hay asignaturas en este curso.</div>
+          <div v-else class="empty-tab"><i class="fas fa-book"></i><p>No hay asignaturas en este curso.</p></div>
         </div>
 
+        <!-- Tab: Alumnos -->
         <div v-else-if="activeTab === 'alumnos'" class="tab-panel">
-          <div class="empty-tab">Funcionalidad de alumnos próximamente.</div>
+          <div v-if="loadingEnrollments" class="loading-center"><div class="spinner"></div></div>
+          <div v-else-if="errorEnrollments" class="error-tab">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Error al cargar los alumnos.</p>
+            <button class="btn btn-primary btn-sm" @click="loadEnrollments">Reintentar</button>
+          </div>
+          <div v-else-if="enrollments.length" class="enrollments-table-wrap">
+            <table class="enrollments-table">
+              <thead>
+                <tr>
+                  <th>Estudiante</th>
+                  <th>Email</th>
+                  <th>Inscripción</th>
+                  <th>Progreso</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="e in enrollments" :key="e.idInscripcion">
+                  <td class="student-cell">
+                    <div class="student-av">{{ e.nombreEstudiante?.[0]?.toUpperCase() }}</div>
+                    <span>{{ e.nombreEstudiante }}</span>
+                  </td>
+                  <td class="text-muted">{{ e.email }}</td>
+                  <td class="text-muted">{{ e.fechaInscripcion ? new Date(e.fechaInscripcion).toLocaleDateString('es-ES') : '—' }}</td>
+                  <td>
+                    <div class="progress-wrap">
+                      <div class="progress-track">
+                        <div class="progress-fill" :style="{ width: `${e.porcentajeCompletado ?? 0}%` }"></div>
+                      </div>
+                      <span class="progress-label">{{ Math.round(e.porcentajeCompletado ?? 0) }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" :class="(e.porcentajeCompletado ?? 0) >= 100 ? 'badge-activo' : 'badge-secondary'">
+                      {{ (e.porcentajeCompletado ?? 0) >= 100 ? 'Completado' : 'En curso' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="empty-tab">
+            <i class="fas fa-users"></i>
+            <p>No hay estudiantes inscritos en este curso.</p>
+          </div>
         </div>
+
         <div v-else-if="activeTab === 'evaluacion'" class="tab-panel">
-          <div class="empty-tab">Funcionalidad de evaluación próximamente.</div>
+          <div class="empty-tab">
+            <i class="fas fa-chart-bar"></i>
+            <p>La evaluación por curso estará disponible en una próxima versión.</p>
+          </div>
         </div>
         <div v-else class="tab-panel">
-          <div class="empty-tab">Funcionalidad de configuración próximamente.</div>
+          <div class="empty-tab">
+            <i class="fas fa-cog"></i>
+            <p>La configuración avanzada del curso estará disponible en una próxima versión.</p>
+          </div>
         </div>
 
       </template>
@@ -190,6 +280,63 @@ const statusClass: Record<string, string> = {
 .subject-meta { font-size: var(--font-size-xs); color: var(--color-muted); margin-top: 2px; }
 .subject-arrow { color: var(--color-muted); font-size: var(--font-size-sm); }
 
-.empty-tab { padding: var(--sp-10); text-align: center; color: var(--color-muted); font-size: var(--font-size-sm); }
+/* Alumnos tab */
+.enrollments-table-wrap { overflow-x: auto; }
+.enrollments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+.enrollments-table th {
+  background: var(--color-muted-bg);
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.enrollments-table td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.enrollments-table tr:last-child td { border-bottom: none; }
+.enrollments-table tr:hover td { background: var(--color-muted-bg); }
+
+.student-cell { display: flex; align-items: center; gap: var(--sp-3); }
+.student-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-primary); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+.text-muted { color: var(--color-muted); }
+
+.progress-wrap { display: flex; align-items: center; gap: var(--sp-2); min-width: 120px; }
+.progress-track { flex: 1; height: 8px; background: var(--color-border); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--color-primary); border-radius: 999px; transition: width 0.3s; }
+.progress-label { font-size: var(--font-size-xs); color: var(--color-muted); white-space: nowrap; }
+
+.empty-tab {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-3); padding: var(--sp-10); text-align: center; color: var(--color-muted);
+}
+.empty-tab i { font-size: 2rem; opacity: 0.35; }
+.empty-tab p { margin: 0; font-size: var(--font-size-sm); }
+
+.error-tab {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-3); padding: var(--sp-8); text-align: center; color: var(--color-muted);
+}
+.error-tab i { font-size: 2rem; color: var(--color-danger); opacity: 0.7; }
+.error-tab p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text); }
+
 .loading-center { display: flex; justify-content: center; padding: var(--sp-12) 0; }
+.error-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-4); padding: var(--sp-12) 0; text-align: center;
+}
+.error-state i { font-size: 2.5rem; color: #dc2626; opacity: 0.7; }
+.error-state p { margin: 0; color: var(--color-text); }
 </style>

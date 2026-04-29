@@ -131,6 +131,37 @@ export interface TareaViewModel {
   entregas?: EntregaTareaVM[]
 }
 
+export interface AsignaturaResumen {
+  idAsignatura: number
+  nombre?: string
+  nombreAsignatura?: string
+  numeroTemas?: number
+  numeroContenidos?: number
+}
+
+export interface AlumnoResumen {
+  idUsuario: number
+  nombre: string
+  apellidos: string
+  email: string
+}
+
+export interface Inscripcion {
+  idInscripcion: number
+  idEstudiante: number
+  nombreEstudiante: string
+  email: string
+  fechaInscripcion?: string
+  porcentajeCompletado?: number
+}
+
+export interface CourseDetailResponse {
+  curso: VistaCursosDetalles
+  asignaturas: AsignaturaResumen[]
+  alumnos: AlumnoResumen[]
+  profesores: { idUsuario: number; nombre: string; apellidos: string }[]
+}
+
 export interface RecursoViewModel {
   idContenido: number
   titulo: string

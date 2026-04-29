@@ -21,10 +21,11 @@ const selectedContent = ref<{ tema: TemaVM; contenido: ContenidoVM } | null>(nul
 
 const addingContentFor = ref<number | null>(null)
 const showTopicModal = ref(false)
+const mobileSidebarOpen = ref(false)
 const newTopic = ref({ nombre: '', orden: 1 })
 const savingTopic = ref(false)
 
-const canEdit = ['Profesor', 'Tutor', 'Administrador'].includes(auth.role) || auth.isAdmin
+const canEdit = computed(() => ['Profesor', 'Tutor', 'Administrador'].includes(auth.role) || auth.isAdmin)
 
 const hasTemas = computed(() => (asignatura.value?.temas?.length ?? 0) > 0)
 const hasAnyContent = computed(() =>
@@ -58,8 +59,8 @@ function toggleTema(id: number) {
 
 function selectContent(tema: TemaVM, contenido: ContenidoVM) {
   selectedContent.value = { tema, contenido }
-  // Asegurarse de que el tema esté abierto
   openTemaId.value = tema.idTema!
+  mobileSidebarOpen.value = false
 }
 
 function contentIcon(tipo: string) {
@@ -139,8 +140,16 @@ async function saveTopic() {
 
     <div v-else-if="asignatura" class="two-panel">
 
+      <!-- Mobile: botón para mostrar/ocultar sidebar -->
+      <div class="mobile-sidebar-toggle">
+        <button class="mobile-toggle-btn" @click="mobileSidebarOpen = !mobileSidebarOpen">
+          <i class="fas" :class="mobileSidebarOpen ? 'fa-times' : 'fa-bars'"></i>
+          {{ mobileSidebarOpen ? 'Cerrar módulos' : 'Ver módulos' }}
+        </button>
+      </div>
+
       <!-- ===== SIDEBAR ===== -->
-      <aside class="sidebar">
+      <aside class="sidebar" :class="{ 'sidebar-mobile-open': mobileSidebarOpen }">
         <div class="sidebar-header">
           <div class="sidebar-subject-name">{{ asignatura.nombreAsignatura }}</div>
           <div class="sidebar-teachers">
@@ -454,8 +463,10 @@ async function saveTopic() {
 }
 .tema-toggle-wrap:hover .trash-btn,
 .sidebar-item-wrap:hover .trash-btn { opacity: 1; }
+/* Papelera siempre visible en el ítem activo */
+.sidebar-item-wrap:has(.sidebar-item-active) .trash-btn { opacity: 1; }
 .trash-btn:hover { background: #fef2f2; color: var(--color-danger); }
-.trash-btn-sm { width: 1.75rem; font-size: 0.75rem; }
+.trash-btn-sm { width: 1.75rem; font-size: 0.75rem; flex-shrink: 0; }
 
 .sidebar-item-wrap {
   display: flex;
@@ -475,7 +486,7 @@ async function saveTopic() {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  width: 100%;
+  min-width: 0;
   padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-8);
   font-size: var(--font-size-sm);
   color: var(--color-muted);
@@ -486,6 +497,7 @@ async function saveTopic() {
   text-align: left;
   font-family: var(--font-sans);
   transition: background 0.15s, color 0.15s;
+  overflow: hidden;
 }
 .sidebar-item:last-child { border-bottom: none; }
 .sidebar-item:hover { background: var(--color-muted-bg); color: var(--color-text); }
@@ -703,8 +715,30 @@ async function saveTopic() {
 
 .loading-center { display: flex; justify-content: center; align-items: center; padding: var(--sp-12) 0; }
 
+/* ===== MOBILE SIDEBAR TOGGLE ===== */
+.mobile-sidebar-toggle { display: none; }
+
+.mobile-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-surface);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
+  .mobile-sidebar-toggle { display: block; }
+
   .two-panel { flex-direction: column; }
+
   .sidebar {
     width: 100%;
     position: static;
@@ -712,7 +746,12 @@ async function saveTopic() {
     min-height: auto;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+    /* oculta por defecto en mobile */
+    display: none;
   }
+  .sidebar.sidebar-mobile-open { display: flex; }
+
   .main-panel { padding: var(--sp-4); }
+  .content-detail { max-width: 100%; }
 }
 </style>

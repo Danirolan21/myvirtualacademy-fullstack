@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getTask, submitTask, gradeTask } from '../../api/tasks'
@@ -13,6 +13,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const tarea = ref<TareaViewModel | null>(null)
 const loading = ref(true)
+const error = ref(false)
 
 const submitFile = ref<File | null>(null)
 const submitComment = ref('')
@@ -30,13 +31,17 @@ const saving = ref(false)
 
 const deadline = computed(() => tarea.value?.fechaEntrega ?? '')
 const isPastDeadline = computed(() => tarea.value ? new Date(tarea.value.fechaEntrega) < new Date() : false)
-const canEdit = auth.isAdmin || ['Profesor', 'Tutor', 'Administrador'].includes(auth.role)
-const canSubmit = !canEdit
+const canEdit = computed(() => auth.isAdmin || ['Profesor', 'Tutor', 'Administrador'].includes(auth.role))
+const canSubmit = computed(() => !canEdit.value)
 
 async function load() {
+  loading.value = true
+  error.value = false
   try {
     const res = await getTask(Number(route.params.id))
     tarea.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
@@ -50,7 +55,7 @@ async function submit() {
   try {
     const fd = new FormData()
     fd.append('archivoEntrega', submitFile.value)
-    fd.append('comentarios', submitComment.value)
+    fd.append('comentarioEstudiante', submitComment.value)
     await submitTask(Number(route.params.id), fd)
     await registerView(Number(route.params.id))
     await load()
@@ -124,6 +129,12 @@ function isLate(fechaEntregada: string) {
   <div class="page">
     <div class="task-container">
       <div v-if="loading" class="loading-center"><div class="spinner"></div></div>
+
+      <div v-else-if="error" class="error-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Error al cargar los datos de la tarea. Inténtalo de nuevo.</p>
+        <button class="btn btn-primary" @click="load">Reintentar</button>
+      </div>
 
       <template v-else-if="tarea">
         <!-- Breadcrumb -->
@@ -726,6 +737,12 @@ function isLate(fechaEntregada: string) {
 .checkbox-input { width: 16px; height: 16px; cursor: pointer; }
 
 .loading-center { display: flex; justify-content: center; padding: var(--sp-12) 0; }
+.error-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-4); padding: var(--sp-12) 0; text-align: center;
+}
+.error-state i { font-size: 2.5rem; color: #dc2626; opacity: 0.7; }
+.error-state p { margin: 0; color: var(--color-text); }
 
 @media (max-width: 768px) {
   .info-grid { grid-template-columns: 1fr; }

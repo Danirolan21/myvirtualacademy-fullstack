@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { getCourses, deleteCourse, getEnrollments, getAvailableStudents, enrollStudent, unenrollStudent } from '../../api/courses'
@@ -16,16 +16,35 @@ type Tab = 'cursos' | 'usuarios' | 'inscripciones'
 const activeTab = ref<Tab>((route.query.tab as Tab) ?? 'cursos')
 watch(activeTab, tab => router.replace({ query: { ...route.query, tab } }))
 
+// ===== BÚSQUEDA =====
+const searchCourses = ref('')
+const searchUsers = ref('')
+
+watch(activeTab, () => {
+  searchCourses.value = ''
+  searchUsers.value = ''
+})
+
 // ===== CURSOS =====
 const courses = ref<VistaCursosDetalles[]>([])
 const loadingCourses = ref(false)
+const errorCourses = ref(false)
 const editingId = ref<number | null>(null)
+
+const filteredCourses = computed(() => {
+  const q = searchCourses.value.trim().toLowerCase()
+  if (!q) return courses.value
+  return courses.value.filter(c => c.nombreCurso.toLowerCase().includes(q))
+})
 
 async function loadCourses() {
   loadingCourses.value = true
+  errorCourses.value = false
   try {
     const res = await getCourses()
     courses.value = res.data
+  } catch {
+    errorCourses.value = true
   } finally {
     loadingCourses.value = false
   }
@@ -72,6 +91,15 @@ function onSaved() {
 // ===== USUARIOS =====
 const users = ref<any[]>([])
 const loadingUsers = ref(false)
+const errorUsers = ref(false)
+
+const filteredUsers = computed(() => {
+  const q = searchUsers.value.trim().toLowerCase()
+  if (!q) return users.value
+  return users.value.filter(u =>
+    `${u.nombre} ${u.apellidos} ${u.email}`.toLowerCase().includes(q)
+  )
+})
 const roles = ref<Rol[]>([])
 const showRegisterPanel = ref(false)
 const regForm = ref({ nombre: '', apellidos: '', email: '', password: '', idRol: 0 })
@@ -81,9 +109,12 @@ const regSaving = ref(false)
 
 async function loadUsers() {
   loadingUsers.value = true
+  errorUsers.value = false
   try {
     const res = await getUsers()
     users.value = res.data
+  } catch {
+    errorUsers.value = true
   } finally {
     loadingUsers.value = false
   }
@@ -127,9 +158,12 @@ const showEnrollModal = ref(false)
 const enrollStudentId = ref(0)
 const enrolling = ref(false)
 
+const errorEnrollments = ref(false)
+
 async function loadEnrollments() {
   if (!selectedCourseId.value) return
   loadingEnrollments.value = true
+  errorEnrollments.value = false
   try {
     const [enrRes, avRes] = await Promise.all([
       getEnrollments(selectedCourseId.value),
@@ -137,6 +171,8 @@ async function loadEnrollments() {
     ])
     enrollments.value = enrRes.data
     availableStudents.value = avRes.data
+  } catch {
+    errorEnrollments.value = true
   } finally {
     loadingEnrollments.value = false
   }
@@ -223,14 +259,29 @@ watch(activeTab, async tab => {
       <!-- ===== TAB CURSOS ===== -->
       <template v-if="activeTab === 'cursos'">
         <div v-if="loadingCourses" class="loading-center"><div class="spinner"></div></div>
-        <div v-else-if="courses.length" class="courses-grid">
-          <CourseCard
-            v-for="curso in courses"
-            :key="curso.idCurso"
-            :curso="curso"
-            :admin-mode="true"
-            @options="onOptions"
-          />
+        <template v-else-if="!errorCourses && courses.length">
+          <div class="search-bar">
+            <i class="fas fa-search search-icon"></i>
+            <input v-model="searchCourses" type="text" class="search-input" placeholder="Buscar por nombre del curso…" />
+          </div>
+          <div v-if="filteredCourses.length" class="courses-grid">
+            <CourseCard
+              v-for="curso in filteredCourses"
+              :key="curso.idCurso"
+              :curso="curso"
+              :admin-mode="true"
+              @options="onOptions"
+            />
+          </div>
+          <div v-else class="empty-state">
+            <i class="fas fa-search empty-icon"></i>
+            <p>No hay cursos que coincidan con "{{ searchCourses }}".</p>
+          </div>
+        </template>
+        <div v-else-if="errorCourses" class="error-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Error al cargar los cursos. Inténtalo de nuevo.</p>
+          <button class="btn btn-primary" @click="loadCourses">Reintentar</button>
         </div>
         <div v-else class="empty-state">
           <i class="fas fa-graduation-cap empty-icon"></i>
@@ -283,7 +334,17 @@ watch(activeTab, async tab => {
         </div>
 
         <div v-if="loadingUsers" class="loading-center"><div class="spinner"></div></div>
-        <div v-else-if="users.length" class="users-table-wrap">
+        <div v-else-if="errorUsers" class="error-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Error al cargar los usuarios. Inténtalo de nuevo.</p>
+          <button class="btn btn-primary" @click="loadUsers">Reintentar</button>
+        </div>
+        <div v-else-if="users.length">
+          <div class="search-bar">
+            <i class="fas fa-search search-icon"></i>
+            <input v-model="searchUsers" type="text" class="search-input" placeholder="Buscar por nombre, apellidos o email…" />
+          </div>
+          <div v-if="filteredUsers.length" class="users-table-wrap">
           <table class="users-table">
             <thead>
               <tr>
@@ -295,7 +356,7 @@ watch(activeTab, async tab => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in users" :key="u.idUsuario">
+              <tr v-for="u in filteredUsers" :key="u.idUsuario">
                 <td class="user-name-cell">
                   <div class="user-av">{{ u.nombre?.[0] }}</div>
                   <span>{{ u.nombre }} {{ u.apellidos }}</span>
@@ -316,6 +377,11 @@ watch(activeTab, async tab => {
               </tr>
             </tbody>
           </table>
+          </div>
+          <div v-else class="empty-state">
+            <i class="fas fa-search empty-icon"></i>
+            <p>No hay usuarios que coincidan con "{{ searchUsers }}".</p>
+          </div>
         </div>
         <div v-else class="empty-state">
           <i class="fas fa-users empty-icon"></i>
@@ -333,6 +399,11 @@ watch(activeTab, async tab => {
         </div>
 
         <div v-if="loadingEnrollments" class="loading-center"><div class="spinner"></div></div>
+        <div v-else-if="errorEnrollments" class="error-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Error al cargar las inscripciones. Inténtalo de nuevo.</p>
+          <button class="btn btn-primary" @click="loadEnrollments">Reintentar</button>
+        </div>
         <div v-else-if="selectedCourseId">
           <div v-if="enrollments.length" class="users-table-wrap">
             <table class="users-table">
@@ -452,6 +523,38 @@ watch(activeTab, async tab => {
 
 .header-actions { display: flex; gap: var(--sp-2); }
 
+.search-bar {
+  position: relative;
+  margin-bottom: var(--sp-5);
+  max-width: 400px;
+}
+.search-icon {
+  position: absolute;
+  left: var(--sp-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-8);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+.search-input::placeholder { color: #adb5bd; }
+
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -466,6 +569,13 @@ watch(activeTab, async tab => {
 }
 .empty-icon { font-size: 3rem; opacity: 0.3; }
 .empty-state p { margin: 0; font-size: var(--font-size-lg); }
+
+.error-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-4); padding: var(--sp-12) 0; color: #dc2626; text-align: center;
+}
+.error-state i { font-size: 2.5rem; opacity: 0.7; }
+.error-state p { margin: 0; font-size: var(--font-size-md); color: var(--color-text); }
 
 /* Register panel */
 .register-panel {
