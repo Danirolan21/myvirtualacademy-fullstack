@@ -5,6 +5,8 @@ import Swal from 'sweetalert2'
 import { getCourses, deleteCourse, getEnrollments, getAvailableStudents, enrollStudent, unenrollStudent } from '../../api/courses'
 import { getUsers, toggleUserActive } from '../../api/users'
 import { getRoles, register } from '../../api/auth'
+import { getAdminStats } from '../../api/admin'
+import type { AdminStats } from '../../api/admin'
 import type { VistaCursosDetalles, Rol } from '../../types'
 import CourseCard from '../../components/CourseCard.vue'
 import CourseEditModal from '../../components/CourseEditModal.vue'
@@ -208,8 +210,24 @@ async function handleEnroll() {
   }
 }
 
+// ===== STATS =====
+const stats = ref<AdminStats | null>(null)
+const loadingStats = ref(true)
+
+async function loadStats() {
+  try {
+    const res = await getAdminStats()
+    stats.value = res.data
+  } catch {
+    // stats are non-critical; fail silently
+  } finally {
+    loadingStats.value = false
+  }
+}
+
 // ===== INIT =====
 onMounted(async () => {
+  loadStats()
   await loadCourses()
   if (activeTab.value === 'usuarios') { await loadUsers(); await loadRoles() }
   if (activeTab.value === 'inscripciones' && courses.value.length) {
@@ -228,6 +246,67 @@ watch(activeTab, async tab => {
 <template>
   <div class="page">
     <div class="container">
+
+      <!-- ===== STATS ===== -->
+      <div class="stats-section">
+        <template v-if="loadingStats">
+          <div v-for="i in 4" :key="i" class="stat-card stat-card--skeleton"></div>
+        </template>
+        <template v-else-if="stats">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--blue"><i class="fas fa-graduation-cap"></i></div>
+            <div class="stat-body">
+              <div class="stat-value">{{ stats.totalCursos }}</div>
+              <div class="stat-label">Cursos totales</div>
+              <div class="stat-sub">{{ stats.cursosActivos }} activos</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--green"><i class="fas fa-users"></i></div>
+            <div class="stat-body">
+              <div class="stat-value">{{ stats.totalUsuarios }}</div>
+              <div class="stat-label">Usuarios</div>
+              <div class="stat-sub">{{ stats.totalEstudiantes }} estudiantes · {{ stats.totalProfesores }} profesores</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--purple"><i class="fas fa-user-check"></i></div>
+            <div class="stat-body">
+              <div class="stat-value">{{ stats.totalInscripciones }}</div>
+              <div class="stat-label">Inscripciones</div>
+              <div class="stat-sub">en todos los cursos</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--orange"><i class="fas fa-clock"></i></div>
+            <div class="stat-body">
+              <div class="stat-value">{{ stats.entregasPendientes }}</div>
+              <div class="stat-label">Entregas pendientes</div>
+              <div class="stat-sub">sin calificar</div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div v-if="stats && stats.actividadReciente.length" class="activity-section">
+        <h3 class="activity-title"><i class="fas fa-history"></i> Actividad reciente</h3>
+        <div class="activity-list">
+          <div v-for="item in stats.actividadReciente" :key="item.idEntrega" class="activity-item">
+            <div class="activity-av">{{ item.nombreEstudiante[0] }}</div>
+            <div class="activity-body">
+              <span class="activity-name">{{ item.nombreEstudiante }}</span>
+              <span class="activity-text"> entregó </span>
+              <span class="activity-content">{{ item.tituloContenido }}</span>
+            </div>
+            <div class="activity-meta">
+              <span class="badge" :class="item.estado === 'Revisado' ? 'badge-activo' : 'badge-secondary'">
+                {{ item.estado }}
+              </span>
+              <span class="activity-date">{{ new Date(item.fechaEntrega).toLocaleDateString('es-ES') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Page header -->
       <div class="page-header">
@@ -673,4 +752,89 @@ watch(activeTab, async tab => {
 @media (max-width: 640px) {
   .reg-form-grid { grid-template-columns: 1fr; }
 }
+
+/* Stats */
+.stats-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card--skeleton {
+  min-height: 80px;
+  background: linear-gradient(90deg, var(--color-muted-bg) 25%, var(--color-border) 50%, var(--color-muted-bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.stat-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-xl);
+  flex-shrink: 0;
+}
+.stat-icon--blue { background: #dbeafe; color: #2563eb; }
+.stat-icon--green { background: #dcfce7; color: #16a34a; }
+.stat-icon--purple { background: #ede9fe; color: #7c3aed; }
+.stat-icon--orange { background: #ffedd5; color: #d97706; }
+
+.stat-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat-value { font-size: 1.75rem; font-weight: var(--font-weight-bold); color: var(--color-text); line-height: 1; }
+.stat-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text); }
+.stat-sub { font-size: var(--font-size-xs); color: var(--color-muted); }
+
+/* Activity */
+.activity-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5) var(--sp-6);
+  margin-bottom: var(--sp-6);
+  box-shadow: var(--shadow-sm);
+}
+.activity-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--sp-4);
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.activity-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.activity-item {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+.activity-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--color-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);
+  flex-shrink: 0; text-transform: uppercase;
+}
+.activity-body { flex: 1; min-width: 0; font-size: var(--font-size-sm); color: var(--color-text); }
+.activity-name { font-weight: var(--font-weight-semibold); }
+.activity-text { color: var(--color-muted); }
+.activity-content { color: var(--color-primary); }
+.activity-meta { display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-1); flex-shrink: 0; }
+.activity-date { font-size: var(--font-size-xs); color: var(--color-muted); }
 </style>
