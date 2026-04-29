@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MyVirtualAcademy.API.Services;
 using MyVirtualAcademy.Helper;
 using MyVirtualAcademy.Models;
@@ -33,6 +34,7 @@ namespace MyVirtualAcademy.API.Controllers
         public record RegisterRequest(string Nombre, string Apellidos, string Email, string Password, int IdRol);
 
         [HttpPost("login")]
+        [EnableRateLimiting("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var user = await repo.FindUserByEmailAsync(request.Email);
