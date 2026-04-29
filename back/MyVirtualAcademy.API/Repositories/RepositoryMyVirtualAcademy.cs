@@ -1218,6 +1218,7 @@ namespace MyVirtualAcademy.Repositories
                         .ToListAsync();
 
                     var tareas = await this.context.Contenidos
+                        .Include(c => c.Tema)
                         .Where(c => asignaturaIds.Contains(c.Tema.IdAsignatura)
                                     && c.FechaEntrega != null
                                     && (c.Tipo == "Tarea" || c.Tipo == "Quiz" || c.Tipo == "Examen"))
@@ -1229,6 +1230,7 @@ namespace MyVirtualAcademy.Repositories
                         {
                             fecha = t.FechaEntrega!.Value.ToString("yyyy-MM-dd"),
                             tipo = "entrega",
+                            tipoContenido = t.Tipo,
                             titulo = t.Titulo,
                             idCurso = ins.Curso.IdCurso
                         });
@@ -1259,6 +1261,7 @@ namespace MyVirtualAcademy.Repositories
                 }
 
                 var tareas = await this.context.Contenidos
+                    .Include(ct => ct.Tema)
                     .Where(ct => asignaturaIds.Contains(ct.Tema.IdAsignatura)
                                 && ct.FechaEntrega != null
                                 && (ct.Tipo == "Tarea" || ct.Tipo == "Quiz" || ct.Tipo == "Examen"))
@@ -1270,7 +1273,7 @@ namespace MyVirtualAcademy.Repositories
                         .Where(a => a.IdAsignatura == t.Tema.IdAsignatura)
                         .Select(a => a.IdCurso)
                         .FirstOrDefaultAsync();
-                    events.Add(new { fecha = t.FechaEntrega!.Value.ToString("yyyy-MM-dd"), tipo = "entrega", titulo = t.Titulo, idCurso });
+                    events.Add(new { fecha = t.FechaEntrega!.Value.ToString("yyyy-MM-dd"), tipo = "entrega", tipoContenido = t.Tipo, titulo = t.Titulo, idCurso });
                 }
             }
 

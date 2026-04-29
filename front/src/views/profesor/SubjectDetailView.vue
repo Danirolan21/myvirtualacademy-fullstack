@@ -431,7 +431,7 @@ async function saveTopic() {
 .tema-toggle:hover { background: var(--color-muted-bg); }
 .tema-toggle-open { background: #f0f7ff; color: var(--color-primary); }
 .tema-toggle-open:hover { background: #e8f2ff; }
-.tema-name { flex: 1; }
+.tema-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .tema-toggle .fas { color: var(--color-muted); font-size: 10px; flex-shrink: 0; }
 .tema-toggle-open .fas { color: var(--color-primary); }
 
@@ -443,14 +443,19 @@ async function saveTopic() {
   padding: 0 var(--sp-3);
   color: var(--color-muted);
   cursor: pointer;
-  font-size: var(--font-size-xs);
+  font-size: 0.75rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
   opacity: 0;
   transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
 .tema-toggle-wrap:hover .trash-btn,
 .sidebar-item-wrap:hover .trash-btn { opacity: 1; }
 .trash-btn:hover { background: #fef2f2; color: var(--color-danger); }
-.trash-btn-sm { padding: 0 var(--sp-2); }
+.trash-btn-sm { width: 1.75rem; font-size: 0.75rem; }
 
 .sidebar-item-wrap {
   display: flex;

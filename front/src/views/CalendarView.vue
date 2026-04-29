@@ -10,7 +10,6 @@ const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ]
 
-const selectedDay = ref<{ year: number; month: number; day: number } | null>(null)
 const events = ref<CalendarEvent[]>([])
 const loading = ref(true)
 
@@ -84,12 +83,6 @@ function selectDay(year: number, month: number, day: number | null) {
     popover.value = { year, month, day, events: dayEvents }
   } else {
     popover.value = null
-    // toggle selection
-    if (selectedDay.value?.year === year && selectedDay.value?.month === month && selectedDay.value?.day === day) {
-      selectedDay.value = null
-    } else {
-      selectedDay.value = { year, month, day }
-    }
   }
 }
 
@@ -97,7 +90,6 @@ interface CalDay {
   day: number | null
   isToday: boolean
   isWeekend: boolean
-  isSelected: boolean
 }
 
 function buildMonth(year: number, month: number): CalDay[][] {
@@ -113,13 +105,12 @@ function buildMonth(year: number, month: number): CalDay[][] {
       day: d,
       isToday: year === today.getFullYear() && month === today.getMonth() && d === today.getDate(),
       isWeekend: dow >= 5,
-      isSelected: !!(selectedDay.value && selectedDay.value.year === year && selectedDay.value.month === month && selectedDay.value.day === d),
     })
   }
   while (cells.length % 7 !== 0) cells.push(null)
   const weeks: CalDay[][] = []
   for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7).map(c => c ?? { day: null, isToday: false, isWeekend: false, isSelected: false }))
+    weeks.push(cells.slice(i, i + 7).map(c => c ?? { day: null, isToday: false, isWeekend: false }))
   }
   return weeks
 }
@@ -132,16 +123,27 @@ const months = computed(() =>
   }))
 )
 
-function eventTypeIcon(tipo: string) {
-  if (tipo === 'entrega') return 'fas fa-tasks'
-  if (tipo === 'inicio_curso') return 'fas fa-play-circle'
-  return 'fas fa-flag-checkered'
+function eventColor(ev: CalendarEvent): string {
+  if (ev.tipo === 'inicio_curso') return '#2563eb'
+  if (ev.tipo === 'fin_curso') return '#7c3aed'
+  // entrega — distinguir por tipoContenido
+  if (ev.tipoContenido === 'Examen' || ev.tipoContenido === 'Quiz') return '#dc2626'
+  if (ev.tipoContenido === 'Documento' || ev.tipoContenido === 'Enlace') return '#16a34a'
+  return '#f59e0b' // Tarea (default)
 }
 
-function eventTypeLabel(tipo: string) {
-  if (tipo === 'entrega') return 'Entrega'
-  if (tipo === 'inicio_curso') return 'Inicio de curso'
-  return 'Fin de curso'
+function eventTypeIcon(ev: CalendarEvent): string {
+  if (ev.tipo === 'inicio_curso') return 'fas fa-play-circle'
+  if (ev.tipo === 'fin_curso') return 'fas fa-flag-checkered'
+  if (ev.tipoContenido === 'Examen') return 'fas fa-file-signature'
+  if (ev.tipoContenido === 'Quiz') return 'fas fa-question-circle'
+  return 'fas fa-laptop-code'
+}
+
+function eventTypeLabel(ev: CalendarEvent): string {
+  if (ev.tipo === 'inicio_curso') return 'Inicio de curso'
+  if (ev.tipo === 'fin_curso') return 'Fin de curso'
+  return ev.tipoContenido ?? 'Entrega'
 }
 
 // Nombre del curso por idCurso (para el filtro)
@@ -200,7 +202,6 @@ function courseName(idCurso: number): string {
                   'day-empty': !cell.day,
                   'day-today': cell.isToday,
                   'day-weekend': cell.isWeekend && !cell.isToday,
-                  'day-selected': cell.isSelected && !cell.isToday,
                   'day-has-events': cell.day && eventsForDay(currentYear, m.index, cell.day!).length > 0,
                 }"
                 :disabled="!cell.day"
@@ -213,7 +214,7 @@ function courseName(idCurso: number): string {
                   v-for="(ev, ei) in eventsForDay(currentYear, m.index, cell.day!).slice(0, 3)"
                   :key="ei"
                   class="event-dot"
-                  :style="{ background: courseColor(ev.idCurso) }"
+                  :style="{ background: eventColor(ev) }"
                 ></span>
               </div>
             </div>
@@ -235,12 +236,12 @@ function courseName(idCurso: number): string {
           </div>
           <div class="popover-events">
             <div v-for="(ev, i) in popover.events" :key="i" class="popover-event">
-              <div class="popover-event-dot" :style="{ background: courseColor(ev.idCurso) }"></div>
+              <div class="popover-event-dot" :style="{ background: eventColor(ev) }"></div>
               <div class="popover-event-body">
-                <div class="popover-event-type">
-                  <i :class="eventTypeIcon(ev.tipo)"></i> {{ eventTypeLabel(ev.tipo) }}
+                <div class="popover-event-type" :style="{ color: eventColor(ev) }">
+                  <i :class="eventTypeIcon(ev)"></i> {{ eventTypeLabel(ev) }}
                 </div>
-                <div class="popover-event-title" :style="{ color: courseColor(ev.idCurso) }">{{ ev.titulo }}</div>
+                <div class="popover-event-title">{{ ev.titulo }}</div>
               </div>
             </div>
           </div>
@@ -252,9 +253,11 @@ function courseName(idCurso: number): string {
 
 <style scoped>
 .cal-container {
-  max-width: 1100px;
+  max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--sp-6) var(--sp-4) var(--sp-10);
+  padding: var(--sp-6) var(--sp-6) var(--sp-10);
+  box-sizing: border-box;
 }
 
 .loading-center { display: flex; justify-content: center; padding: var(--sp-12) 0; }
@@ -316,7 +319,7 @@ function courseName(idCurso: number): string {
 /* Months grid */
 .months-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(280px, 1fr));
   gap: var(--sp-5);
 }
 
@@ -330,7 +333,7 @@ function courseName(idCurso: number): string {
 }
 
 .month-name {
-  font-size: var(--font-size-sm);
+  font-size: 0.95rem;
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   text-align: center;
@@ -341,7 +344,7 @@ function courseName(idCurso: number): string {
 
 /* Weekday headers */
 .weekdays-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: var(--sp-1); }
-.wd-cell { font-size: 0.65rem; font-weight: var(--font-weight-semibold); color: var(--color-muted); text-align: center; padding: 2px 0; }
+.wd-cell { font-size: 0.75rem; font-weight: var(--font-weight-semibold); color: var(--color-muted); text-align: center; padding: 2px 0; }
 
 /* Day rows */
 .week-row { display: grid; grid-template-columns: repeat(7, 1fr); }
@@ -353,9 +356,9 @@ function courseName(idCurso: number): string {
 }
 
 .day-cell {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   text-align: center;
-  padding: 3px 1px;
+  padding: 4px 1px;
   border: none;
   background: none;
   border-radius: 50%;
@@ -375,8 +378,7 @@ function courseName(idCurso: number): string {
 .day-empty { pointer-events: none; }
 .day-weekend { color: var(--color-muted); }
 .day-today { background: #0d6efd; color: white; font-weight: var(--font-weight-bold); }
-.day-selected { background: #0b5ed7; color: white; font-weight: var(--font-weight-semibold); }
-.day-has-events:not(.day-today):not(.day-selected) { font-weight: var(--font-weight-semibold); }
+.day-has-events:not(.day-today) { font-weight: var(--font-weight-semibold); }
 
 /* Event dots */
 .event-dots {
