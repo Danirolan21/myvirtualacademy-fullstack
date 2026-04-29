@@ -28,8 +28,11 @@ const savingTopic = ref(false)
 const canEdit = computed(() => ['Profesor', 'Tutor', 'Administrador'].includes(auth.role) || auth.isAdmin)
 
 const hasTemas = computed(() => (asignatura.value?.temas?.length ?? 0) > 0)
-const hasAnyContent = computed(() =>
-  asignatura.value?.temas?.some(t => (t.contenidos?.length ?? 0) > 0) ?? false
+
+// selectedTemaId persists across load() because we store the ID, not the object
+const selectedTemaId = ref<number | null>(null)
+const selectedTema = computed(() =>
+  asignatura.value?.temas?.find(t => t.idTema === selectedTemaId.value) ?? null
 )
 
 async function load() {
@@ -49,17 +52,23 @@ async function load() {
 onMounted(load)
 
 function toggleTema(id: number) {
-  // Acordeón exclusivo
-  openTemaId.value = openTemaId.value === id ? null : id
-  // Al colapsar el tema activo, limpiar selección si el contenido era de ese tema
-  if (selectedContent.value?.tema.idTema === id && openTemaId.value === null) {
-    selectedContent.value = null
+  if (openTemaId.value === id) {
+    // Closing
+    openTemaId.value = null
+    selectedTemaId.value = null
+    if (selectedContent.value?.tema.idTema === id) selectedContent.value = null
+  } else {
+    // Opening: select this tema, clear any content from a different tema
+    openTemaId.value = id
+    selectedTemaId.value = id
+    if (selectedContent.value?.tema.idTema !== id) selectedContent.value = null
   }
 }
 
 function selectContent(tema: TemaVM, contenido: ContenidoVM) {
   selectedContent.value = { tema, contenido }
   openTemaId.value = tema.idTema!
+  selectedTemaId.value = tema.idTema!
   mobileSidebarOpen.value = false
 }
 
@@ -101,6 +110,7 @@ async function confirmDeleteTema(idTema: number, nombre: string) {
   await deleteTopic(idTema)
   if (selectedContent.value?.tema.idTema === idTema) selectedContent.value = null
   if (openTemaId.value === idTema) openTemaId.value = null
+  if (selectedTemaId.value === idTema) selectedTemaId.value = null
   await load()
 }
 
@@ -221,42 +231,25 @@ async function saveTopic() {
       <!-- ===== PANEL DERECHO ===== -->
       <main class="main-panel">
 
-        <!-- Empty state: sin módulos en la asignatura -->
+        <!-- Estado 1: sin módulos -->
         <div v-if="!hasTemas" class="empty-selection">
           <div class="empty-selection-icon"><i class="fas fa-layer-group"></i></div>
-          <h3 class="empty-selection-title">Esta asignatura aún no tiene contenidos</h3>
+          <h3 class="empty-selection-title">Esta asignatura aún no tiene módulos</h3>
           <p class="empty-selection-desc">Crea el primer módulo para empezar a añadir material.</p>
           <button v-if="canEdit" class="btn btn-primary btn-add-first" @click="showTopicModal = true">
             <i class="fas fa-plus"></i> Añadir primer módulo
           </button>
         </div>
 
-        <!-- Empty state: hay módulos pero ninguno tiene contenidos -->
-        <div v-else-if="!hasAnyContent && !selectedContent" class="empty-selection">
-          <div class="empty-selection-icon"><i class="fas fa-inbox"></i></div>
-          <h3 class="empty-selection-title">Los módulos aún no tienen contenidos</h3>
-          <p class="empty-selection-desc">Abre un módulo en la barra izquierda y añade el primer contenido.</p>
-        </div>
-
-        <!-- Empty state: hay contenidos pero ninguno seleccionado -->
-        <div v-else-if="!selectedContent" class="empty-selection">
-          <div class="empty-selection-icon"><i class="fas fa-hand-pointer"></i></div>
-          <h3 class="empty-selection-title">Selecciona un contenido</h3>
-          <p class="empty-selection-desc">Haz clic en cualquier elemento del menú izquierdo para verlo aquí.</p>
-        </div>
-
-        <!-- Contenido seleccionado -->
-        <div v-else class="content-detail">
-          <!-- Breadcrumb interno -->
+        <!-- Estado 2: contenido seleccionado -->
+        <div v-else-if="selectedContent" class="content-detail">
           <div class="content-breadcrumb">
             <span class="bc-tema">{{ selectedContent.tema.nombreTema }}</span>
             <i class="fas fa-chevron-right bc-sep"></i>
             <span class="bc-current">{{ selectedContent.contenido.tituloContenido }}</span>
           </div>
 
-          <!-- Card del contenido -->
           <div class="content-card">
-            <!-- Fila badge tipo + badge estado -->
             <div class="content-meta-row">
               <div class="content-type-badge" :class="contentTypeColor(selectedContent.contenido.tipoContenido)">
                 <i :class="contentIcon(selectedContent.contenido.tipoContenido)"></i>
@@ -268,15 +261,12 @@ async function saveTopic() {
                 {{ selectedContent.contenido.contenido_Completado ? 'Completado' : 'Pendiente' }}
               </span>
             </div>
-
             <h1 class="content-detail-title">{{ selectedContent.contenido.tituloContenido }}</h1>
-
             <p v-if="selectedContent.contenido.descripcionContenido" class="content-detail-desc">
               {{ selectedContent.contenido.descripcionContenido }}
             </p>
           </div>
 
-          <!-- Acción principal según tipo -->
           <div class="content-action">
             <RouterLink
               :to="contentRoute(selectedContent.contenido.idContenido!, selectedContent.contenido.tipoContenido)"
@@ -292,7 +282,6 @@ async function saveTopic() {
             </RouterLink>
           </div>
 
-          <!-- Sección de añadir contenido (solo editores) -->
           <div v-if="canEdit" class="add-content-area">
             <div v-if="addingContentFor === selectedContent.tema.idTema">
               <ContentForm
@@ -306,6 +295,48 @@ async function saveTopic() {
               <i class="fas fa-plus"></i> Añadir contenido a este módulo
             </button>
           </div>
+        </div>
+
+        <!-- Estado 3: módulo seleccionado sin contenido -->
+        <div v-else-if="selectedTema" class="tema-detail">
+          <div class="content-breadcrumb">
+            <span class="bc-tema">{{ asignatura.nombreAsignatura }}</span>
+            <i class="fas fa-chevron-right bc-sep"></i>
+            <span class="bc-current">{{ selectedTema.nombreTema }}</span>
+          </div>
+
+          <div class="content-card tema-overview-card">
+            <div class="tema-overview-icon"><i class="fas fa-layer-group"></i></div>
+            <h2 class="tema-overview-title">{{ selectedTema.nombreTema }}</h2>
+            <p v-if="!selectedTema.contenidos?.length" class="tema-overview-empty">
+              Este módulo no tiene contenidos aún.
+            </p>
+            <p v-else class="tema-overview-count">
+              {{ selectedTema.contenidos.length }} contenido{{ selectedTema.contenidos.length !== 1 ? 's' : '' }} en este módulo.
+              Haz clic en uno del menú izquierdo para verlo.
+            </p>
+          </div>
+
+          <div v-if="canEdit" class="tema-add-content-wrap">
+            <div v-if="addingContentFor === selectedTema.idTema">
+              <ContentForm
+                :id-tema="selectedTema.idTema!"
+                :id-asignatura="asignatura.idAsignatura"
+                @saved="() => { addingContentFor = null; load() }"
+                @cancel="addingContentFor = null"
+              />
+            </div>
+            <button v-else class="btn btn-primary btn-add-content-primary" @click="addingContentFor = selectedTema!.idTema!">
+              <i class="fas fa-plus"></i> Añadir contenido a este módulo
+            </button>
+          </div>
+        </div>
+
+        <!-- Estado 4: nada seleccionado -->
+        <div v-else class="empty-selection">
+          <div class="empty-selection-icon"><i class="fas fa-hand-pointer"></i></div>
+          <h3 class="empty-selection-title">Selecciona un módulo</h3>
+          <p class="empty-selection-desc">Haz clic en el título de un módulo del menú izquierdo para empezar.</p>
         </div>
 
 
@@ -672,6 +703,50 @@ async function saveTopic() {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
+}
+
+/* Tema detail (estado 3) */
+.tema-detail { max-width: 680px; }
+.tema-overview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--sp-8) var(--sp-6);
+  margin-bottom: 1.5rem;
+}
+.tema-overview-icon {
+  font-size: 2.5rem;
+  color: var(--color-primary);
+  opacity: 0.5;
+  margin-bottom: var(--sp-4);
+}
+.tema-overview-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--sp-3);
+}
+.tema-overview-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  margin: 0;
+}
+.tema-overview-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+  margin: 0;
+}
+.tema-add-content-wrap {
+  display: flex;
+  justify-content: center;
+}
+.btn-add-content-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-6);
+  font-size: var(--font-size-md);
 }
 
 /* Zona añadir contenido */

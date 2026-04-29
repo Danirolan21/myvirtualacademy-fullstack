@@ -156,9 +156,21 @@ namespace MyVirtualAcademy.Repositories
 
         #region AREA PERSONAL ADMIN
 
-        public async Task<List<VistaUsuariosConRoles>> GetAllUsersWithRolesAsync()
+        public async Task<List<object>> GetAllUsersWithRolesAsync()
         {
-            return await this.context.VistaUsuariosConRoles.ToListAsync();
+            var rows = await this.context.VistaUsuariosConRoles.ToListAsync();
+            return rows
+                .GroupBy(u => u.IdUsuario)
+                .Select(g => (object)new
+                {
+                    idUsuario = g.Key,
+                    nombre    = g.First().Nombre,
+                    apellidos = g.First().Apellidos,
+                    email     = g.First().Email,
+                    rol       = string.Join(", ", g.Select(u => u.Rol).Distinct()),
+                    activo    = g.First().Activo
+                })
+                .ToList();
         }
 
         public async Task<bool> ToggleUserActiveAsync(int idUsuario)

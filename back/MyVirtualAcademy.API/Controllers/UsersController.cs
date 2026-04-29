@@ -25,7 +25,7 @@ namespace MyVirtualAcademy.API.Controllers
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await repo.GetAllUsersWithRolesAsync();
-            return Ok(users);
+            return Ok(users); // already grouped by user with concatenated roles
         }
 
         [HttpPut("{id:int}/toggle-active")]
