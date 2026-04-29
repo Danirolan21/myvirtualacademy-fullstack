@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MyVirtualAcademy.API.Services;
+using MyVirtualAcademy.Data;
 using MyVirtualAcademy.Helper;
 using MyVirtualAcademy.Repositories;
 
@@ -12,11 +15,16 @@ namespace MyVirtualAcademy.API.Controllers
     {
         private readonly RepositoryMyVirtualAcademy repo;
         private readonly HelperPathProvider helperPath;
+        private readonly MyVirtualAcademyContext context;
+        private readonly NotificationService notifService;
 
-        public CoursesController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath)
+        public CoursesController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath,
+            MyVirtualAcademyContext context, NotificationService notifService)
         {
             this.repo = repo;
             this.helperPath = helperPath;
+            this.context = context;
+            this.notifService = notifService;
         }
 
         [HttpGet]
@@ -37,7 +45,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpGet("{id:int}")]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "ProfesorUTutor")]
         public async Task<IActionResult> GetById(int id)
         {
             var curso = await repo.GetDetallesCursoAsync(id);
@@ -133,6 +141,11 @@ namespace MyVirtualAcademy.API.Controllers
         {
             var ok = await repo.EnrollStudentAsync(id, request.IdEstudiante);
             if (!ok) return BadRequest(new { message = "El estudiante ya está inscrito en este curso." });
+
+            var curso = await context.Cursos.FirstOrDefaultAsync(c => c.IdCurso == id);
+            if (curso != null)
+                _ = notifService.NotifyEnrolledAsync(request.IdEstudiante, curso.Nombre);
+
             return Ok(new { message = "Estudiante inscrito correctamente" });
         }
 

@@ -57,6 +57,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<HelperPathProvider>();
 builder.Services.AddTransient<RepositoryMyVirtualAcademy>();
 builder.Services.AddTransient<JwtTokenService>();
+builder.Services.AddTransient<NotificationService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"]

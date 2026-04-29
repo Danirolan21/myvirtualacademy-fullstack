@@ -25,6 +25,7 @@ namespace MyVirtualAcademy.Data
         public DbSet<ComentarioCalificacion> ComentariosCalificaciones { get; set; }
         public DbSet<ProgresoInscripcion> ProgresoInscripciones { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Notificacion> Notificaciones { get; set; }
         public DbSet<VistaUsuariosConRoles> VistaUsuariosConRoles { get; set; }
         public DbSet<ViewAsignaturaUsuario> VistaAsignaturasUsuario { get; set; }
         public DbSet<VistaCursosDetalles> VistaCursosDetalles { get; set; }

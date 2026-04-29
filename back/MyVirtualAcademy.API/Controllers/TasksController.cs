@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyVirtualAcademy.API.Services;
 using MyVirtualAcademy.Repositories;
 
 namespace MyVirtualAcademy.API.Controllers
@@ -11,10 +12,12 @@ namespace MyVirtualAcademy.API.Controllers
     public class TasksController : ControllerBase
     {
         private readonly RepositoryMyVirtualAcademy repo;
+        private readonly NotificationService notifService;
 
-        public TasksController(RepositoryMyVirtualAcademy repo)
+        public TasksController(RepositoryMyVirtualAcademy repo, NotificationService notifService)
         {
             this.repo = repo;
+            this.notifService = notifService;
         }
 
         [HttpGet("{id:int}")]
@@ -56,6 +59,11 @@ namespace MyVirtualAcademy.API.Controllers
             if (!ok)
                 return BadRequest(new { message = "Error al procesar la entrega. Comprueba el tamaño del archivo (máx. 10 MB)." });
 
+            var nombreEstudiante = User.FindFirstValue(ClaimTypes.Name) ?? "Estudiante";
+            var tarea = await repo.ObtenerTareaDetalleAsync(id, userId);
+            var tituloContenido = tarea?.Titulo ?? "tarea";
+            _ = notifService.NotifyTaskSubmittedAsync(id, userId, nombreEstudiante, tituloContenido);
+
             return Ok(new { message = "Entrega realizada correctamente" });
         }
 
@@ -67,6 +75,10 @@ namespace MyVirtualAcademy.API.Controllers
             await repo.GuardarCalificacionAsync(
                 request.IdEntrega, request.IdEstudiante, id,
                 request.Calificacion, request.Comentarios ?? string.Empty, profesorId);
+
+            var tarea = await repo.ObtenerTareaDetalleAsync(id, request.IdEstudiante);
+            var tituloContenido = tarea?.Titulo ?? "tarea";
+            _ = notifService.NotifyTaskGradedAsync(request.IdEstudiante, tituloContenido, request.Calificacion);
 
             return Ok(new { message = "Calificación guardada correctamente" });
         }

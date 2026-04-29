@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
+import { getNotifications, getUnreadCount, markRead, markAllRead } from '../api/notifications'
+import type { Notificacion } from '../api/notifications'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -9,6 +11,58 @@ const router = useRouter()
 const dropdownOpen = ref(false)
 const mobileOpen = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+const bellOpen = ref(false)
+const bellRef = ref<HTMLElement | null>(null)
+const unreadCount = ref(0)
+const notifications = ref<Notificacion[]>([])
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+async function fetchUnreadCount() {
+  if (!auth.isAuthenticated) return
+  try {
+    const res = await getUnreadCount()
+    unreadCount.value = res.data.count
+  } catch { /* ignore */ }
+}
+
+async function openBell() {
+  bellOpen.value = !bellOpen.value
+  if (bellOpen.value) {
+    try {
+      const res = await getNotifications()
+      notifications.value = res.data
+      unreadCount.value = 0
+    } catch { /* ignore */ }
+  }
+}
+
+async function handleMarkAllRead() {
+  await markAllRead()
+  notifications.value = notifications.value.map(n => ({ ...n, leida: true }))
+  unreadCount.value = 0
+}
+
+async function handleMarkRead(n: Notificacion) {
+  if (!n.leida) {
+    await markRead(n.idNotificacion)
+    n.leida = true
+  }
+}
+
+function notifIcon(tipo: string) {
+  if (tipo === 'entrega') return 'fas fa-file-upload'
+  if (tipo === 'calificacion') return 'fas fa-star'
+  return 'fas fa-user-check'
+}
+
+function closeBell(e: MouseEvent) {
+  if (bellRef.value && !bellRef.value.contains(e.target as Node)) {
+    bellOpen.value = false
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function personalAreaRoute() {
   if (auth.isAdmin) return '/admin'
@@ -19,6 +73,8 @@ function personalAreaRoute() {
 async function handleLogout() {
   dropdownOpen.value = false
   mobileOpen.value = false
+  bellOpen.value = false
+  if (pollInterval) clearInterval(pollInterval)
   await auth.logout()
   router.push('/login')
 }
@@ -33,8 +89,22 @@ function closeMobileOnNav() {
   mobileOpen.value = false
 }
 
-onMounted(() => document.addEventListener('mousedown', closeDropdown))
-onUnmounted(() => document.removeEventListener('mousedown', closeDropdown))
+function onMouseDown(e: MouseEvent) {
+  closeDropdown(e)
+  closeBell(e)
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onMouseDown)
+  if (auth.isAuthenticated) {
+    fetchUnreadCount()
+    pollInterval = setInterval(fetchUnreadCount, 60_000)
+  }
+})
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onMouseDown)
+  if (pollInterval) clearInterval(pollInterval)
+})
 </script>
 
 <template>
@@ -61,6 +131,45 @@ onUnmounted(() => document.removeEventListener('mousedown', closeDropdown))
 
       <!-- Right section -->
       <div class="navbar-right">
+        <!-- Bell icon -->
+        <div v-if="auth.isAuthenticated" class="bell-wrap" ref="bellRef">
+          <button class="bell-btn" type="button" @click="openBell" :aria-label="`${unreadCount} notificaciones`">
+            <i class="fas fa-bell"></i>
+            <span v-if="unreadCount > 0" class="bell-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          </button>
+          <div v-if="bellOpen" class="bell-dropdown">
+            <div class="bell-header">
+              <span class="bell-title">Notificaciones</span>
+              <button v-if="notifications.some(n => !n.leida)" class="bell-mark-all" @click="handleMarkAllRead">
+                Marcar todas leídas
+              </button>
+            </div>
+            <div class="bell-list">
+              <div v-if="!notifications.length" class="bell-empty">
+                <i class="fas fa-bell-slash"></i>
+                <span>Sin notificaciones</span>
+              </div>
+              <div
+                v-for="n in notifications"
+                :key="n.idNotificacion"
+                class="bell-item"
+                :class="{ 'bell-item--unread': !n.leida }"
+                @click="handleMarkRead(n)"
+              >
+                <div class="bell-item-icon" :class="`bell-icon--${n.tipo}`">
+                  <i :class="notifIcon(n.tipo)"></i>
+                </div>
+                <div class="bell-item-body">
+                  <div class="bell-item-title">{{ n.titulo }}</div>
+                  <div class="bell-item-msg">{{ n.mensaje }}</div>
+                  <div class="bell-item-date">{{ new Date(n.fechaCreacion).toLocaleDateString('es-ES') }}</div>
+                </div>
+                <span v-if="!n.leida" class="bell-dot"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Authenticated: user menu -->
         <div v-if="auth.isAuthenticated" class="user-menu" ref="userMenuRef">
           <button class="user-toggle" @click="dropdownOpen = !dropdownOpen" type="button">
@@ -298,5 +407,121 @@ onUnmounted(() => document.removeEventListener('mousedown', closeDropdown))
   .navbar-links .nav-link:last-child { border-bottom: none; }
 
   .user-name { display: none; }
+}
+
+/* ── Bell ── */
+.bell-wrap { position: relative; }
+
+.bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--navbar-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-2);
+  border-radius: var(--radius-md);
+  transition: background 0.15s;
+}
+.bell-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+.bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.bell-dropdown {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  width: 340px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1100;
+  overflow: hidden;
+}
+
+.bell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.bell-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text); }
+.bell-mark-all {
+  background: none; border: none;
+  font-size: var(--font-size-xs); color: var(--color-primary);
+  cursor: pointer; padding: 0; font-family: var(--font-sans);
+}
+.bell-mark-all:hover { text-decoration: underline; }
+
+.bell-list { max-height: 360px; overflow-y: auto; }
+
+.bell-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-2); padding: var(--sp-8) var(--sp-4);
+  color: var(--color-muted); font-size: var(--font-size-sm);
+}
+.bell-empty i { font-size: 2rem; opacity: 0.4; }
+
+.bell-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.bell-item:last-child { border-bottom: none; }
+.bell-item:hover { background: var(--color-muted-bg); }
+.bell-item--unread { background: #eff6ff; }
+.bell-item--unread:hover { background: #dbeafe; }
+
+.bell-item-icon {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-sm);
+}
+.bell-icon--entrega { background: #dcfce7; color: #16a34a; }
+.bell-icon--calificacion { background: #fef9c3; color: #ca8a04; }
+.bell-icon--inscripcion { background: #ede9fe; color: #7c3aed; }
+
+.bell-item-body { flex: 1; min-width: 0; }
+.bell-item-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text); }
+.bell-item-msg { font-size: var(--font-size-xs); color: var(--color-muted); margin-top: 2px; line-height: 1.4; }
+.bell-item-date { font-size: var(--font-size-xs); color: var(--color-muted); margin-top: var(--sp-1); }
+
+.bell-dot {
+  width: 8px; height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+@media (max-width: 400px) {
+  .bell-dropdown { width: calc(100vw - 2rem); right: -3rem; }
 }
 </style>
