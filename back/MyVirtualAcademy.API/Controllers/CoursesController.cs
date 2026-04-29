@@ -147,7 +147,7 @@ namespace MyVirtualAcademy.API.Controllers
             if (curso != null)
             {
                 var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-                _ = notifService.NotifyEnrolledAsync(request.IdEstudiante, curso.Nombre, adminId);
+                try { await notifService.NotifyEnrolledAsync(request.IdEstudiante, curso.Nombre, adminId); } catch { }
             }
 
             return Ok(new { message = "Estudiante inscrito correctamente" });

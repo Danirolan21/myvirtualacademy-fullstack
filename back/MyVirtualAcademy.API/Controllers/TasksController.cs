@@ -62,7 +62,7 @@ namespace MyVirtualAcademy.API.Controllers
             var nombreEstudiante = User.FindFirstValue(ClaimTypes.Name) ?? "Estudiante";
             var tarea = await repo.ObtenerTareaDetalleAsync(id, userId);
             var tituloContenido = tarea?.Titulo ?? "tarea";
-            _ = notifService.NotifyTaskSubmittedAsync(id, userId, nombreEstudiante, tituloContenido);
+            try { await notifService.NotifyTaskSubmittedAsync(id, userId, nombreEstudiante, tituloContenido); } catch { }
 
             return Ok(new { message = "Entrega realizada correctamente" });
         }
@@ -78,7 +78,7 @@ namespace MyVirtualAcademy.API.Controllers
 
             var tarea = await repo.ObtenerTareaDetalleAsync(id, request.IdEstudiante);
             var tituloContenido = tarea?.Titulo ?? "tarea";
-            _ = notifService.NotifyTaskGradedAsync(request.IdEstudiante, tituloContenido, request.Calificacion, profesorId);
+            try { await notifService.NotifyTaskGradedAsync(request.IdEstudiante, tituloContenido, request.Calificacion, profesorId); } catch { }
 
             return Ok(new { message = "Calificación guardada correctamente" });
         }
