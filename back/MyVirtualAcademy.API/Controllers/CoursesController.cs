@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -144,7 +145,10 @@ namespace MyVirtualAcademy.API.Controllers
 
             var curso = await context.Cursos.FirstOrDefaultAsync(c => c.IdCurso == id);
             if (curso != null)
-                _ = notifService.NotifyEnrolledAsync(request.IdEstudiante, curso.Nombre);
+            {
+                var adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                _ = notifService.NotifyEnrolledAsync(request.IdEstudiante, curso.Nombre, adminId);
+            }
 
             return Ok(new { message = "Estudiante inscrito correctamente" });
         }

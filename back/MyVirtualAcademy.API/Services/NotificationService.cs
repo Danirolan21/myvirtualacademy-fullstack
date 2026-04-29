@@ -15,7 +15,6 @@ namespace MyVirtualAcademy.API.Services
 
         public async Task NotifyTaskSubmittedAsync(int contenidoId, int estudianteId, string nombreEstudiante, string tituloContenido)
         {
-            // Find the professor(s) of the subject that contains this content
             var profesores = await context.Contenidos
                 .Where(c => c.IdContenido == contenidoId)
                 .Join(context.Temas, c => c.IdTema, t => t.IdTema, (c, t) => t)
@@ -30,14 +29,15 @@ namespace MyVirtualAcademy.API.Services
                 Titulo = "Nueva entrega recibida",
                 Mensaje = $"{nombreEstudiante} ha entregado la tarea \"{tituloContenido}\".",
                 Leida = false,
-                FechaCreacion = DateTime.UtcNow
+                FechaCreacion = DateTime.UtcNow,
+                EnviadoPor = estudianteId
             });
 
             context.Notificaciones.AddRange(notifs);
             await context.SaveChangesAsync();
         }
 
-        public async Task NotifyTaskGradedAsync(int estudianteId, string tituloContenido, decimal calificacion)
+        public async Task NotifyTaskGradedAsync(int estudianteId, string tituloContenido, decimal calificacion, int profesorId)
         {
             context.Notificaciones.Add(new Notificacion
             {
@@ -46,12 +46,13 @@ namespace MyVirtualAcademy.API.Services
                 Titulo = "Tarea calificada",
                 Mensaje = $"Tu entrega de \"{tituloContenido}\" ha sido calificada con {calificacion:F1}.",
                 Leida = false,
-                FechaCreacion = DateTime.UtcNow
+                FechaCreacion = DateTime.UtcNow,
+                EnviadoPor = profesorId
             });
             await context.SaveChangesAsync();
         }
 
-        public async Task NotifyEnrolledAsync(int estudianteId, string nombreCurso)
+        public async Task NotifyEnrolledAsync(int estudianteId, string nombreCurso, int? adminId = null)
         {
             context.Notificaciones.Add(new Notificacion
             {
@@ -60,7 +61,8 @@ namespace MyVirtualAcademy.API.Services
                 Titulo = "Inscripción confirmada",
                 Mensaje = $"Has sido inscrito en el curso \"{nombreCurso}\".",
                 Leida = false,
-                FechaCreacion = DateTime.UtcNow
+                FechaCreacion = DateTime.UtcNow,
+                EnviadoPor = adminId
             });
             await context.SaveChangesAsync();
         }

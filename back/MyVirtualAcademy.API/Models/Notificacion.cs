@@ -28,6 +28,9 @@ namespace MyVirtualAcademy.Models
         [Column("Fecha_Creacion")]
         public DateTime FechaCreacion { get; set; }
 
+        [Column("Enviado_Por")]
+        public int? EnviadoPor { get; set; }
+
         [ForeignKey("IdUsuario")]
         public Usuario Usuario { get; set; } = null!;
     }
