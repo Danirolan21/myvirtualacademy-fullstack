@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import { getNotifications, getUnreadCount, markRead, markAllRead } from '../api/notifications'
@@ -93,6 +93,18 @@ function onMouseDown(e: MouseEvent) {
   closeDropdown(e)
   closeBell(e)
 }
+
+watch(() => auth.isAuthenticated, (authenticated) => {
+  if (authenticated && !pollInterval) {
+    fetchUnreadCount()
+    pollInterval = setInterval(fetchUnreadCount, 60_000)
+  } else if (!authenticated && pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+    unreadCount.value = 0
+    notifications.value = []
+  }
+})
 
 onMounted(() => {
   document.addEventListener('mousedown', onMouseDown)
