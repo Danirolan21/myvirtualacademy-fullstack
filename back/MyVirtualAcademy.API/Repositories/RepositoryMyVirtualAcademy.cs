@@ -173,6 +173,30 @@ namespace MyVirtualAcademy.Repositories
                 .ToList();
         }
 
+        public async Task<(bool success, string? error)> UpdatePasswordAsync(
+            int idUsuario, string currentPassword, string newPassword)
+        {
+            var user = await this.context.Usuarios.FindAsync(idUsuario);
+            if (user == null) return (false, "Usuario no encontrado");
+
+            bool valid;
+            if (user.MigratedToBCrypt)
+                valid = HelperCryptography.VerifyPasswordBCrypt(currentPassword, user.PassBCrypt!);
+            else
+            {
+                var hash = HelperCryptography.EncryptPassword(currentPassword, user.Salt);
+                valid = HelperCryptography.CompararArrays(hash, user.Password_Hash);
+            }
+
+            if (!valid) return (false, "La contraseña actual no es correcta");
+
+            user.PassBCrypt = HelperCryptography.HashPasswordBCrypt(newPassword);
+            user.MigratedToBCrypt = true;
+            user.Password = string.Empty;
+            await this.context.SaveChangesAsync();
+            return (true, null);
+        }
+
         public async Task<bool> ToggleUserActiveAsync(int idUsuario)
         {
             var user = await this.context.Usuarios.FindAsync(idUsuario);

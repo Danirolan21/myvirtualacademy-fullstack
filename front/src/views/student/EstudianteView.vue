@@ -57,35 +57,37 @@ function coverGradient(idAsignatura: number): string {
           <div class="card-cover" :style="{ background: coverGradient(asig.idAsignatura) }"></div>
 
           <div class="card-body">
-            <div class="card-title-row">
-              <h3 class="card-title">{{ asig.nombreAsignatura }}</h3>
-              <span class="badge" :class="asig.estado === 'Activo' ? 'badge-activo' : 'badge-finalizado'">
-                {{ asig.estado }}
-              </span>
-            </div>
-
-            <p class="card-meta"><i class="fas fa-graduation-cap"></i> {{ asig.nombreCurso }}</p>
-            <p class="card-meta"><i class="fas fa-user-tie"></i> {{ asig.nombreProfesor }}</p>
-            <p class="card-meta"><i class="far fa-calendar-alt"></i> {{ formatDate(asig.fechaInicio) }} – {{ formatDate(asig.fechaFin) }}</p>
-
-            <div class="progress-section">
-              <div class="progress-label">
-                <span>Progreso</span>
-                <span class="progress-value-text">{{ asig.progreso.toFixed(1) }}%</span>
+            <div class="card-content">
+              <div class="card-title-row">
+                <h3 class="card-title">{{ asig.nombreAsignatura }}</h3>
+                <span class="badge" :class="asig.estado === 'Activo' ? 'badge-activo' : 'badge-finalizado'">
+                  {{ asig.estado }}
+                </span>
               </div>
-              <div class="progress-track">
-                <div class="progress-fill" :style="{ width: `${asig.progreso}%` }"></div>
-              </div>
-            </div>
 
-            <div class="card-stats">
-              <div class="stat">
-                <span class="stat-val">{{ asig.numeroTemas }}</span>
-                <span class="stat-lbl">Temas</span>
+              <p class="card-meta"><i class="fas fa-graduation-cap"></i> {{ asig.nombreCurso }}</p>
+              <p class="card-meta"><i class="fas fa-user-tie"></i> {{ asig.nombreProfesor }}</p>
+              <p class="card-meta"><i class="far fa-calendar-alt"></i> {{ formatDate(asig.fechaInicio) }} – {{ formatDate(asig.fechaFin) }}</p>
+
+              <div class="progress-section">
+                <div class="progress-label">
+                  <span>Progreso</span>
+                  <span class="progress-value-text">{{ asig.progreso.toFixed(1) }}%</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" :style="{ width: `${asig.progreso}%` }"></div>
+                </div>
               </div>
-              <div class="stat">
-                <span class="stat-val">{{ diasRestantes(asig.fechaFin) }}</span>
-                <span class="stat-lbl">Días rest.</span>
+
+              <div class="card-stats">
+                <div class="stat">
+                  <span class="stat-val">{{ asig.numeroTemas }}</span>
+                  <span class="stat-lbl">Temas</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-val">{{ diasRestantes(asig.fechaFin) }}</span>
+                  <span class="stat-lbl">Días rest.</span>
+                </div>
               </div>
             </div>
 
@@ -157,6 +159,12 @@ function coverGradient(idAsignatura: number): string {
   padding: var(--sp-4);
   display: flex;
   flex-direction: column;
+  flex: 1;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
   gap: var(--sp-2);
   flex: 1;
 }
@@ -217,7 +225,7 @@ function coverGradient(idAsignatura: number): string {
 .stat-val { display: block; font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary); }
 .stat-lbl { font-size: var(--font-size-xs); color: var(--color-muted); }
 
-.btn-block { width: 100%; justify-content: center; margin-top: auto; padding-top: var(--sp-3); }
+.btn-block { width: 100%; justify-content: center; margin-top: var(--sp-3); }
 
 .empty-state {
   text-align: center;

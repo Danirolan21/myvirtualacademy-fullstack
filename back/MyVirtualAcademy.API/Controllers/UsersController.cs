@@ -72,6 +72,18 @@ namespace MyVirtualAcademy.API.Controllers
             if (requesterId != id && !isAdmin)
                 return Forbid();
 
+            // Password change (only if at least one password field is provided)
+            var hasCurrent = !string.IsNullOrEmpty(request.ContrasenaActual);
+            var hasNew     = !string.IsNullOrEmpty(request.NuevaContrasena);
+            if (hasCurrent || hasNew)
+            {
+                if (!hasCurrent || !hasNew)
+                    return BadRequest(new { message = "Debes rellenar la contraseña actual y la nueva." });
+
+                var (ok, error) = await repo.UpdatePasswordAsync(id, request.ContrasenaActual!, request.NuevaContrasena!);
+                if (!ok) return BadRequest(new { message = error });
+            }
+
             string? fileName = null;
             if (request.FotoPerfil != null)
             {
@@ -96,6 +108,8 @@ namespace MyVirtualAcademy.API.Controllers
             string Nombre,
             string Apellidos,
             string? Telefono,
-            IFormFile? FotoPerfil);
+            IFormFile? FotoPerfil,
+            string? ContrasenaActual,
+            string? NuevaContrasena);
     }
 }

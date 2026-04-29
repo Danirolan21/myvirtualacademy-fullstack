@@ -65,7 +65,10 @@ const statusClass: Record<string, string> = {
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">No eres tutor o suplente de ningún curso.</div>
+        <div v-else class="empty-state">
+          <i class="fas fa-graduation-cap"></i>
+          <p>No eres tutor o suplente de ningún curso.</p>
+        </div>
       </div>
 
       <!-- Tab Asignaturas -->
@@ -87,7 +90,10 @@ const statusClass: Record<string, string> = {
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">No eres profesor de ninguna asignatura.</div>
+        <div v-else class="empty-state">
+          <i class="fas fa-book-open"></i>
+          <p>No eres profesor de ninguna asignatura.</p>
+        </div>
       </div>
 
     </div>
@@ -145,6 +151,7 @@ const statusClass: Record<string, string> = {
 .card-cover-gradient { background: linear-gradient(135deg, #3498db, #2c3e50); }
 
 .card-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; }
+.card-body > .btn { margin-top: auto; }
 .card-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--color-text); margin: 0; }
 .card-meta { font-size: var(--font-size-sm); color: var(--color-muted); margin: 0; display: flex; align-items: center; gap: var(--sp-2); }
 .card-meta i { width: 14px; text-align: center; }
@@ -160,6 +167,11 @@ const statusClass: Record<string, string> = {
 .stat-val { display: block; font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary); }
 .stat-lbl { font-size: var(--font-size-xs); color: var(--color-muted); }
 
-.empty-state { text-align: center; padding: var(--sp-12) 0; color: var(--color-muted); }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-3); padding: var(--sp-12) 0; color: var(--color-muted); text-align: center;
+}
+.empty-state i { font-size: 2.5rem; opacity: 0.35; }
+.empty-state p { margin: 0; }
 .loading-center { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 </style>

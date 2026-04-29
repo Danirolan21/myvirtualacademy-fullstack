@@ -26,7 +26,7 @@ onMounted(async () => {
       </main>
       <footer class="site-footer">
         <div class="container">
-          &copy; 2025 - MyVirtualAcademy - <a href="#">Privacy</a>
+          &copy; 2026 - MyVirtualAcademy - <a href="#">Privacy</a>
         </div>
       </footer>
     </div>
@@ -44,7 +44,7 @@ onMounted(async () => {
   z-index: 9999;
 }
 .app-shell {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -52,7 +52,7 @@ onMounted(async () => {
   flex: 1;
 }
 .site-footer {
-  margin-top: auto;
+  text-align: center;
   padding: var(--sp-4) 0;
   border-top: 1px solid var(--color-border);
   color: var(--color-muted);

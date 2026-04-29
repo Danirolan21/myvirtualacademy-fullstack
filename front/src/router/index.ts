@@ -12,10 +12,10 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     { path: '/perfil', component: () => import('../views/user/PerfilView.vue'), meta: { requiresAuth: true } },
-    { path: '/perfil/editar', component: () => import('../views/user/EditProfileView.vue'), meta: { requiresAuth: true } },
+    { path: '/perfil/editar', redirect: '/perfil' },
     { path: '/admin', component: () => import('../views/admin/AdminView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/cursos/crear', component: () => import('../views/admin/CreateCourseView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/admin/cursos/:id', component: () => import('../views/admin/CourseDetailView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/cursos/:id', component: () => import('../views/admin/CourseDetailView.vue'), meta: { requiresAuth: true, roles: ['Administrador', 'Profesor', 'Tutor'] } },
     {
       path: '/profesor',
       component: () => import('../views/profesor/ProfesorView.vue'),
