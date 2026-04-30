@@ -1,30 +1,87 @@
 # MyVirtualAcademy
 
-LMS académico separado en dos proyectos independientes:
+Un LMS (Learning Management System) académico construido desde cero. Gestiona cursos, asignaturas, contenidos y entregas de tareas para tres tipos de usuario: administradores, profesores y estudiantes. Nació como monolito MVC y fue migrado a una arquitectura desacoplada con API REST + SPA.
 
-- `/back` — API REST en ASP.NET Core 9, Entity Framework Core 9, SQL Server
-- `/front` — SPA en Vue 3 + Vite + TypeScript
+---
 
-El monolito original está en `/MyVirtualAcademy/` como referencia de lectura, excluido del repositorio.
+## Stack
 
-## Prerrequisitos
+| Capa | Tecnología |
+|------|-----------|
+| API | ASP.NET Core 9, Entity Framework Core 9 |
+| Base de datos | SQL Server (esquema propio, sin migraciones EF) |
+| Auth | JWT (access token en memoria) + cookie httpOnly (refresh token), BCrypt |
+| Frontend | Vue 3 + Vite + TypeScript, Pinia, Vue Router 4, Axios |
 
-- .NET 9 SDK
-- Node.js 20 o superior con npm
-- SQL Server (SQLEXPRESS o cualquier instancia) con la base de datos `MYVIRTUALACADEMY` restaurada
+---
 
-La base de datos parte del esquema en `back/script.sql`. Antes del primer arranque del API hay que ejecutar también el script de migración:
+## Qué puedes hacer según tu rol
 
-```bash
-sqlcmd -S LOCALHOST\SQLEXPRESS -d MYVIRTUALACADEMY \
-  -i back/migrations/001_add_bcrypt_and_refresh_tokens.sql
+### Administrador
+- Dashboard con métricas globales (cursos activos, inscripciones, entregas pendientes) y un feed de actividad reciente
+- Gestión completa de cursos: crear, editar, archivar, borrar, subir portada
+- Tabla de usuarios con toggle activo/inactivo y filtrado por rol
+- Registro de nuevos usuarios asignándoles rol
+
+### Profesor / Tutor
+- Vista de tus asignaturas y cursos asociados
+- Acordeón de temas por asignatura; añadir temas y contenidos (vídeo, documento, enlace, tarea)
+- Calificar entregas de estudiantes con comentario de retroalimentación
+
+### Estudiante
+- Vista de asignaturas inscritas con barras de progreso por contenido completado
+- Acceso a vídeos, documentos y enlaces externos
+- Entrega y reentrega de tareas con countdown hasta la fecha límite
+
+### Todos los roles
+- Perfil unificado con edición inline (nombre, apellidos, teléfono, avatar) y cambio de contraseña
+- Notificaciones en tiempo real: campanita en la barra con badge de no leídas, poll cada 60 s
+- Calendario con eventos por tipo de contenido (tareas, exámenes, vídeos…)
+
+---
+
+## Principales vistas
+
+```
+/ ──────────────── Landing pública
+/login ─────────── Formulario de acceso
+/admin ─────────── Dashboard + gestión de cursos y usuarios (solo admin)
+/admin/cursos/:id ─ Detalle de curso con asignaturas y estadísticas
+/profesor ──────── Tus asignaturas y cursos
+/asignatura/:id ── Acordeón de temas y contenidos, panel de creación
+/estudiante ────── Mis asignaturas con progreso
+/contenido/:id/* ── Tarea / Vídeo / Documento / Enlace (vista específica)
+/perfil ────────── Perfil propio, modo edición inline
+/calendario ────── Calendario mensual de eventos
 ```
 
-Ese script añade las columnas `Pass_BCrypt`, `MigratedToBCrypt` e `IsAdmin` a la tabla `Usuarios`, marca al usuario con `ID_Usuario = 1` como administrador, y crea la tabla `RefreshTokens`. Sin ejecutarlo el login devuelve error de columna inexistente.
+---
 
-## Arranque
+## Instalación y arranque
 
-### Backend
+### Requisitos previos
+
+- .NET 9 SDK
+- Node.js 20+ con npm
+- SQL Server (SQLEXPRESS o cualquier instancia)
+
+### 1. Base de datos
+
+Restaura o ejecuta el DDL completo:
+
+```bash
+# Esquema inicial
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/script.sql
+
+# Migraciones incrementales (en orden)
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/001_add_bcrypt_and_refresh_tokens.sql
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/002_replace_notifications_table.sql
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/003_ensure_isadmin_column.sql
+```
+
+La migración 001 es obligatoria antes del primer arranque: añade las columnas de BCrypt, IsAdmin y la tabla RefreshTokens. Sin ella el login falla.
+
+### 2. Backend
 
 ```bash
 cd back/MyVirtualAcademy.API
@@ -32,11 +89,10 @@ dotnet restore
 dotnet run
 ```
 
-El API queda en `http://localhost:5100`. Swagger disponible en `http://localhost:5100/swagger`.
+API disponible en `http://localhost:5100`.  
+Swagger en `http://localhost:5100/swagger`.
 
-Antes del primer `dotnet run` hay que editar `appsettings.json` con la connection string real y una clave JWT de al menos 32 caracteres. No se requiere `appsettings.Development.json` salvo para sobreescribir el nivel de log.
-
-### Frontend
+### 3. Frontend
 
 ```bash
 cd front
@@ -45,48 +101,82 @@ npm install
 npm run dev
 ```
 
-La app queda en `http://localhost:5173`. El proxy de Vite redirige `/api/*` al backend en desarrollo, así que no hay configuración adicional de CORS ni de baseURL mientras ambos corran localmente.
+App disponible en `http://localhost:5173`.  
+El proxy de Vite redirige `/api/*` al backend automáticamente en desarrollo.
+
+---
 
 ## Variables de entorno
 
-### Backend (`appsettings.json` o variables del sistema)
+### Backend — `appsettings.json`
 
 | Clave | Descripción |
 |-------|-------------|
 | `ConnectionStrings__SqlMyVirtualAcademy` | Connection string de SQL Server |
-| `JwtSettings__SecretKey` | Secreto JWT, mínimo 32 caracteres |
+| `JwtSettings__SecretKey` | Secreto JWT (mínimo 32 caracteres) |
 | `JwtSettings__Issuer` | Issuer del token |
 | `JwtSettings__Audience` | Audience del token |
-| `JwtSettings__AccessTokenExpiryMinutes` | Vida del access token (por defecto 15) |
-| `JwtSettings__RefreshTokenExpiryDays` | Vida del refresh token (por defecto 7) |
-| `AllowedOrigins__0` | Origen del frontend permitido por CORS (producción) |
+| `JwtSettings__AccessTokenExpiryMinutes` | Duración del access token (defecto: 15) |
+| `JwtSettings__RefreshTokenExpiryDays` | Duración del refresh token (defecto: 7) |
+| `AllowedOrigins__0` | Origen del frontend para CORS en producción |
 
-No commitear credenciales reales en `appsettings.json`. En producción usar variables de entorno del sistema o un gestor de secretos.
+En producción usa variables de entorno del sistema en lugar de editar `appsettings.json`.
 
-### Frontend (`.env.local`, ignorado por git)
+### Frontend — `.env.local`
 
 | Variable | Descripción |
 |----------|-------------|
-| `VITE_API_URL` | URL base del backend; solo necesario en producción |
+| `VITE_API_URL` | URL base del backend (solo necesaria en producción) |
 
-## Migración de contraseñas
+---
 
-Las contraseñas se migran de SHA-256 a BCrypt de forma transparente en el primer login de cada usuario: el sistema verifica con el hash antiguo, re-hashea con BCrypt (coste 12) y vacía la columna `Pass` en texto plano. No se requiere ninguna acción manual por usuario.
+## Credenciales de prueba
 
-## Estructura del repo
+| Rol | Email | Contraseña |
+|-----|-------|------------|
+| Administrador | admin@mva.com | admin123 |
+| Profesor | profesor@mva.com | prof123 |
+| Estudiante | estudiante@mva.com | est123 |
+
+Las contraseñas se migran automáticamente de SHA-256 a BCrypt en el primer login. No es necesaria ninguna acción manual.
+
+---
+
+## Seguridad relevante
+
+- **Rate limiting** en `POST /api/auth/login`: máximo 10 intentos por IP por minuto (429 si se supera)
+- **Refresh token** en cookie httpOnly — el frontend nunca lo toca
+- **BCrypt** (coste 12) para almacenamiento de contraseñas; migración lazy desde el hash legacy
+- **Nombres de fichero** generados con UUID — nunca se usa el nombre original del cliente
+- **IsAdmin** determinado por columna en BD, no por ID hardcodeado
+
+---
+
+## Estructura del repositorio
 
 ```
 back/
-  MyVirtualAcademy.API/     API REST (.NET 9)
-  migrations/               Scripts SQL incrementales numerados
-  script.sql                DDL completo del esquema de la BD (solo referencia)
+  MyVirtualAcademy.API/
+    Controllers/        Un controller por recurso (Auth, Courses, Subjects, Tasks…)
+    Models/             Entidades EF Core
+    Repositories/       Toda la lógica de acceso a datos en un único repositorio
+    Services/           JwtTokenService, NotificationService
+    Helper/             HelperPathProvider, HelperCryptography
+  migrations/           Scripts SQL incrementales numerados
+  script.sql            DDL completo (referencia)
 
 front/
   src/
-    api/                    Módulos Axios por recurso
-    components/             Componentes Vue reutilizables
-    router/                 Vue Router 4 con guards de autenticación
-    stores/                 Pinia (store de auth con silent refresh)
-    types/                  Interfaces TypeScript
-    views/                  Vistas organizadas por rol y tipo de contenido
+    api/                Módulos Axios por recurso
+    components/         AppNavBar, CourseCard, ContentForm, CountdownTimer…
+    router/             Vue Router 4 con guards por rol
+    stores/             Pinia — auth con silent refresh
+    types/              Interfaces TypeScript (Usuario, Curso, Asignatura…)
+    views/              Vistas organizadas por rol (admin/, profesor/, student/, content/)
 ```
+
+---
+
+## Estado del proyecto
+
+En desarrollo activo. Funcionalidad principal completa para los tres roles. Pendiente: módulo de exámenes, búsqueda/filtrado de contenidos y paginación de listas.
