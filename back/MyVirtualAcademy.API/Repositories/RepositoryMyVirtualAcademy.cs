@@ -1054,7 +1054,8 @@ namespace MyVirtualAcademy.Repositories
                     return false;
 
                 // Generar nombre único para el archivo
-                string fileName = $"{usuarioId}_{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(archivo.FileName)}";
+                var ext1 = Path.GetExtension(archivo.FileName).ToLower();
+                string fileName = Guid.NewGuid().ToString("N") + ext1;
                 string filePath = this.helperPath.MapPath(fileName, Folders.contents);
 
                 // Guardar archivo
@@ -1109,7 +1110,8 @@ namespace MyVirtualAcademy.Repositories
                     return false;
 
                 // Generar nombre único para el archivo
-                string fileName = $"{usuarioId}_{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(archivo.FileName)}";
+                var ext2 = Path.GetExtension(archivo.FileName).ToLower();
+                string fileName = Guid.NewGuid().ToString("N") + ext2;
                 string filePath = this.helperPath.MapPath(fileName, Folders.contents);
 
                 // Guardar archivo
@@ -1119,7 +1121,7 @@ namespace MyVirtualAcademy.Repositories
                 }
 
                 // Actualizar información en la base de datos
-                entregaPrevia.URLEntrega = $"/uploads/tareas/{contenidoId}/{fileName}";
+                entregaPrevia.URLEntrega = fileName;
                 entregaPrevia.FechaEntrega = DateTime.Now;
                 entregaPrevia.Estado = "Pendiente";
 

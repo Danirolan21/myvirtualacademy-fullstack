@@ -68,7 +68,8 @@ namespace MyVirtualAcademy.API.Controllers
             string? fileName = null;
             if (request.ArchivoContenido != null)
             {
-                fileName = $"{Guid.NewGuid()}_{Path.GetFileName(request.ArchivoContenido.FileName)}";
+                var ext = Path.GetExtension(request.ArchivoContenido.FileName).ToLower();
+                fileName = Guid.NewGuid().ToString("N") + ext;
                 var path = helperPath.MapPath(fileName, Folders.contents);
                 using var stream = new FileStream(path, FileMode.Create);
                 await request.ArchivoContenido.CopyToAsync(stream);
@@ -105,7 +106,8 @@ namespace MyVirtualAcademy.API.Controllers
             string? urlContenido = null;
             if (request.ArchivoContenido != null && request.ArchivoContenido.Length > 0)
             {
-                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(request.ArchivoContenido.FileName)}";
+                var fileExt = Path.GetExtension(request.ArchivoContenido.FileName).ToLower();
+                var fileName = Guid.NewGuid().ToString("N") + fileExt;
                 var path = helperPath.MapPath(fileName, Folders.contents);
                 using var stream = new FileStream(path, FileMode.Create);
                 await request.ArchivoContenido.CopyToAsync(stream);

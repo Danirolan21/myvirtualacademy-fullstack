@@ -92,7 +92,7 @@ namespace MyVirtualAcademy.API.Controllers
                 if (!allowed.Contains(ext))
                     return BadRequest(new { message = "Formato de imagen no permitido." });
 
-                fileName = request.FotoPerfil.FileName;
+                fileName = Guid.NewGuid().ToString("N") + ext;
                 var path = helperPath.MapPath(fileName, Folders.users);
                 using var stream = new FileStream(path, FileMode.Create);
                 await request.FotoPerfil.CopyToAsync(stream);
