@@ -245,7 +245,7 @@ async function submit() {
       </div>
 
       <!-- ===== EDIT MODE BODY ===== -->
-      <form v-else class="container edit-body" @submit.prevent="submit">
+      <form v-else class="container edit-body" @submit.prevent="submit" novalidate>
 
         <!-- Left: datos personales -->
         <section class="edit-section">
@@ -261,7 +261,7 @@ async function submit() {
           </div>
           <div class="field">
             <label class="form-label">Teléfono</label>
-            <input v-model="editForm.telefono" type="tel" class="form-control" placeholder="Número de teléfono" />
+            <input v-model="editForm.telefono" type="text" class="form-control" placeholder="Número de teléfono" />
           </div>
         </section>
 

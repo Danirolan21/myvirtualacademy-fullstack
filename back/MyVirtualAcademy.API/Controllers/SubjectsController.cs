@@ -39,5 +39,18 @@ namespace MyVirtualAcademy.API.Controllers
             var asignaturas = await repo.GetAsignaturasByUserAsync(estudianteId);
             return Ok(asignaturas);
         }
+
+        [HttpPost]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Create([FromBody] CreateSubjectRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.NombreAsignatura))
+                return BadRequest(new { message = "El nombre de la asignatura es obligatorio." });
+
+            var asignatura = await repo.CreateAsignaturaAsync(request.IdCurso, request.NombreAsignatura.Trim());
+            return Ok(new { asignatura.IdAsignatura, asignatura.Nombre, asignatura.IdCurso });
+        }
+
+        public record CreateSubjectRequest(int IdCurso, string NombreAsignatura);
     }
 }

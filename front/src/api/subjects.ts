@@ -9,3 +9,6 @@ export const getSubjectsByProfessor = (profesorId: number) =>
 
 export const getSubjectsByStudent = (estudianteId: number) =>
   client.get<AsignaturaUsuarioDTO[]>(`/api/subjects/by-student/${estudianteId}`)
+
+export const createSubject = (idCurso: number, nombreAsignatura: string) =>
+  client.post('/api/subjects', { idCurso, nombreAsignatura })

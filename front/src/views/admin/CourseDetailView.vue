@@ -1,15 +1,43 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import { getCourse, getEnrollments } from '../../api/courses'
+import { createSubject } from '../../api/subjects'
 import { formatDate } from '../../utils/format'
 import type { CourseDetailResponse, Inscripcion } from '../../types'
 
 const route = useRoute()
+const auth = useAuthStore()
 const curso = ref<CourseDetailResponse | null>(null)
 const loading = ref(true)
 const error = ref(false)
 const activeTab = ref<'asignaturas' | 'alumnos' | 'evaluacion' | 'configuracion'>('asignaturas')
+
+// Nueva asignatura
+const showNewSubjectForm = ref(false)
+const newSubjectName = ref('')
+const savingSubject = ref(false)
+const subjectError = ref('')
+
+async function submitNewSubject() {
+  if (!newSubjectName.value.trim()) return
+  savingSubject.value = true
+  subjectError.value = ''
+  try {
+    const res = await createSubject(Number(route.params.id), newSubjectName.value.trim())
+    curso.value!.asignaturas = [
+      ...(curso.value!.asignaturas ?? []),
+      { idAsignatura: res.data.idAsignatura, nombre: res.data.nombre, idCurso: res.data.idCurso }
+    ]
+    newSubjectName.value = ''
+    showNewSubjectForm.value = false
+  } catch (e: any) {
+    subjectError.value = e?.response?.data?.message ?? 'Error al crear la asignatura.'
+  } finally {
+    savingSubject.value = false
+  }
+}
 
 const enrollments = ref<Inscripcion[]>([])
 const loadingEnrollments = ref(false)
@@ -99,6 +127,38 @@ const statusClass: Record<string, string> = {
 
         <!-- Tab: Asignaturas -->
         <div v-if="activeTab === 'asignaturas'" class="tab-panel">
+          <!-- Cabecera con botón nueva asignatura -->
+          <div v-if="auth.isAdmin" class="subjects-toolbar">
+            <span class="subjects-count">{{ curso.asignaturas?.length ?? 0 }} asignatura{{ (curso.asignaturas?.length ?? 0) !== 1 ? 's' : '' }}</span>
+            <button class="btn btn-primary btn-sm" @click="showNewSubjectForm = !showNewSubjectForm">
+              <i class="fas fa-plus"></i> Nueva asignatura
+            </button>
+          </div>
+
+          <!-- Formulario inline nueva asignatura -->
+          <div v-if="showNewSubjectForm" class="new-subject-form">
+            <input
+              v-model="newSubjectName"
+              type="text"
+              class="form-control"
+              placeholder="Nombre de la asignatura"
+              autofocus
+              @keydown.enter.prevent="submitNewSubject"
+              @keydown.escape="showNewSubjectForm = false"
+            />
+            <div class="new-subject-actions">
+              <button class="btn btn-primary btn-sm" :disabled="savingSubject || !newSubjectName.trim()" @click="submitNewSubject">
+                <i v-if="savingSubject" class="fas fa-spinner fa-spin"></i>
+                <i v-else class="fas fa-check"></i>
+                Guardar
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" @click="showNewSubjectForm = false; subjectError = ''">
+                Cancelar
+              </button>
+            </div>
+            <p v-if="subjectError" class="subject-error"><i class="fas fa-exclamation-circle"></i> {{ subjectError }}</p>
+          </div>
+
           <div v-if="curso.asignaturas?.length" class="subject-list">
             <RouterLink
               v-for="asig in curso.asignaturas"
@@ -114,7 +174,10 @@ const statusClass: Record<string, string> = {
               <i class="fas fa-arrow-right subject-arrow"></i>
             </RouterLink>
           </div>
-          <div v-else class="empty-tab"><i class="fas fa-book"></i><p>No hay asignaturas en este curso.</p></div>
+          <div v-else-if="!showNewSubjectForm" class="empty-tab">
+            <i class="fas fa-book"></i>
+            <p>No hay asignaturas en este curso.</p>
+          </div>
         </div>
 
         <!-- Tab: Alumnos -->
@@ -253,6 +316,34 @@ const statusClass: Record<string, string> = {
 }
 
 .tab-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+
+.subjects-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-muted-bg);
+}
+.subjects-count { font-size: var(--font-size-sm); color: var(--color-muted); }
+
+.new-subject-form {
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.new-subject-actions { display: flex; gap: var(--sp-2); }
+.subject-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
 
 .subject-list { display: flex; flex-direction: column; }
 .subject-row {

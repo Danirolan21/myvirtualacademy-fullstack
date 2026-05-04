@@ -306,6 +306,25 @@ namespace MyVirtualAcademy.Repositories
                 .ToListAsync();
         }
 
+        private async Task<int> GetMaxIdAsignaturaAsync()
+        {
+            if (!this.context.Asignaturas.Any()) return 1;
+            return await this.context.Asignaturas.MaxAsync(a => a.IdAsignatura) + 1;
+        }
+
+        public async Task<Asignatura> CreateAsignaturaAsync(int idCurso, string nombre)
+        {
+            var asignatura = new Asignatura
+            {
+                IdAsignatura = await GetMaxIdAsignaturaAsync(),
+                IdCurso = idCurso,
+                Nombre = nombre
+            };
+            this.context.Asignaturas.Add(asignatura);
+            await this.context.SaveChangesAsync();
+            return asignatura;
+        }
+
         public async Task<List<Usuario>> GetAlumnosPorCursoAsync(int idCurso)
         {
             return await this.context.Usuarios
