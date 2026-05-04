@@ -84,7 +84,8 @@ namespace MyVirtualAcademy.API.Controllers
             string? fileName = null;
             if (request.ImagenPortada != null)
             {
-                fileName = request.ImagenPortada.FileName;
+                var ext = Path.GetExtension(request.ImagenPortada.FileName).ToLower();
+                fileName = Guid.NewGuid().ToString("N") + ext;
                 var path = helperPath.MapPath(fileName, Folders.courses);
                 using var stream = new FileStream(path, FileMode.Create);
                 await request.ImagenPortada.CopyToAsync(stream);
@@ -105,7 +106,8 @@ namespace MyVirtualAcademy.API.Controllers
             string? fileName = null;
             if (request.ImagenPortada != null)
             {
-                fileName = request.ImagenPortada.FileName;
+                var ext = Path.GetExtension(request.ImagenPortada.FileName).ToLower();
+                fileName = Guid.NewGuid().ToString("N") + ext;
                 var path = helperPath.MapPath(fileName, Folders.courses);
                 using var stream = new FileStream(path, FileMode.Create);
                 await request.ImagenPortada.CopyToAsync(stream);

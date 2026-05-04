@@ -345,55 +345,88 @@ namespace MyVirtualAcademy.Repositories
                 .Where(a => a.IdAsignatura == idAsignatura)
                 .ToListAsync();
 
-            if (!datos.Any())
-                return null; //Si no hay datos significa que no hay profesores que imparta la asignatura
-
-            var asignaturaDetalle = new AsignaturaDetalleViewModel();
-
-            var primerRegistro = datos.First();
-            asignaturaDetalle.IdAsignatura = primerRegistro.IdAsignatura;
-            asignaturaDetalle.NombreAsignatura = primerRegistro.NombreAsignatura;
-
-            asignaturaDetalle.Profesores = datos
-                .GroupBy(p => p.IdProfesor)
-                .Select(g => new ProfesorViewModel
+            // Si la vista devuelve filas, la asignatura tiene profesores asignados — camino normal
+            if (datos.Any())
+            {
+                var primerRegistro = datos.First();
+                return new AsignaturaDetalleViewModel
                 {
-                    IdProfesor = g.Key,
-                    NombreProfesor = g.First().NombreProfesor,
-                    ApellidosProfesor = g.First().ApellidosProfesor,
-                    FotoPerfil = g.First().FotoPerfil
-                })
-                .ToList();
-
-            List<TemaViewModel> temas = datos
-                .Where(t => t.IdTema.HasValue)
-                .GroupBy(t => new { t.IdTema, t.NombreTema, t.OrdenTema })
-                .Select(tg => new TemaViewModel
-                {
-                    IdTema = tg.Key.IdTema,
-                    NombreTema = tg.Key.NombreTema,
-                    OrdenTema = tg.Key.OrdenTema,
-
-                    Contenidos = tg
-                        .Where(c => c.IDContenido.HasValue)
-                        .Select(c => new ContenidoViewModel
+                    IdAsignatura = primerRegistro.IdAsignatura,
+                    NombreAsignatura = primerRegistro.NombreAsignatura,
+                    Profesores = datos
+                        .GroupBy(p => p.IdProfesor)
+                        .Select(g => new ProfesorViewModel
                         {
-                            IdContenido = c.IDContenido,
-                            TituloContenido = c.TituloContenido,
-                            DescripcionContenido = c.DescripcionContenido,
-                            TipoContenido = c.TipoContenido,
-                            Orden_Contenido = c.OrdenContenido,
-                            Contenido_Completado = c.ContenidoCompletado
+                            IdProfesor = g.Key,
+                            NombreProfesor = g.First().NombreProfesor,
+                            ApellidosProfesor = g.First().ApellidosProfesor,
+                            FotoPerfil = g.First().FotoPerfil
                         })
-                        .OrderBy(c => c.Orden_Contenido)
+                        .ToList(),
+                    Temas = datos
+                        .Where(t => t.IdTema.HasValue)
+                        .GroupBy(t => new { t.IdTema, t.NombreTema, t.OrdenTema })
+                        .Select(tg => new TemaViewModel
+                        {
+                            IdTema = tg.Key.IdTema,
+                            NombreTema = tg.Key.NombreTema,
+                            OrdenTema = tg.Key.OrdenTema,
+                            Contenidos = tg
+                                .Where(c => c.IDContenido.HasValue)
+                                .Select(c => new ContenidoViewModel
+                                {
+                                    IdContenido = c.IDContenido,
+                                    TituloContenido = c.TituloContenido,
+                                    DescripcionContenido = c.DescripcionContenido,
+                                    TipoContenido = c.TipoContenido,
+                                    Orden_Contenido = c.OrdenContenido,
+                                    Contenido_Completado = c.ContenidoCompletado
+                                })
+                                .OrderBy(c => c.Orden_Contenido)
+                                .ToList()
+                        })
+                        .OrderBy(t => t.OrdenTema)
                         .ToList()
-                })
-                .OrderBy(t => t.OrdenTema)
-                .ToList();
+                };
+            }
 
-            asignaturaDetalle.Temas = temas;
+            // La vista no devuelve filas: asignatura sin profesores asignados.
+            // Comprobamos si la asignatura existe para distinguir 404 real de vacía.
+            var asignatura = await this.context.Asignaturas
+                .Include(a => a.Temas)
+                    .ThenInclude(t => t.Contenidos)
+                .FirstOrDefaultAsync(a => a.IdAsignatura == idAsignatura);
 
-            return asignaturaDetalle;
+            if (asignatura == null)
+                return null;
+
+            return new AsignaturaDetalleViewModel
+            {
+                IdAsignatura = asignatura.IdAsignatura,
+                NombreAsignatura = asignatura.Nombre,
+                Profesores = [],
+                Temas = (asignatura.Temas ?? [])
+                    .Select(t => new TemaViewModel
+                    {
+                        IdTema = t.IdTema,
+                        NombreTema = t.Nombre,
+                        OrdenTema = t.Orden,
+                        Contenidos = (t.Contenidos ?? [])
+                            .Select(c => new ContenidoViewModel
+                            {
+                                IdContenido = c.IdContenido,
+                                TituloContenido = c.Titulo,
+                                DescripcionContenido = c.Descripcion,
+                                TipoContenido = c.Tipo,
+                                Orden_Contenido = c.Orden,
+                                Contenido_Completado = false
+                            })
+                            .OrderBy(c => c.Orden_Contenido)
+                            .ToList()
+                    })
+                    .OrderBy(t => t.OrdenTema)
+                    .ToList()
+            };
         }
 
         public async Task CreateCourseAsync(string nombre, string? descripcion
