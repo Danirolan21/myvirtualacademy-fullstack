@@ -134,9 +134,11 @@ En producción usa variables de entorno del sistema en lugar de editar `appsetti
 
 | Rol | Email | Contraseña |
 |-----|-------|------------|
-| Administrador | admin@mva.com | admin123 |
-| Profesor | profesor@mva.com | prof123 |
-| Estudiante | estudiante@mva.com | est123 |
+| Administrador | admin.supremo@tajamar365.com | admin |
+| Profesor | paco.garciaserrano@tajamar365.com | paco |
+| Profesora | marialuisa.fernandezmontero@tajamar365.com | marilusa |
+| Tutor | alfredo.gutierrezparra@tajamar365.com | alfredito |
+| Estudiante | daniel.rodriguezlancha@tajamar365.com | lucialamejor |
 
 Las contraseñas se migran automáticamente de SHA-256 a BCrypt en el primer login. No es necesaria ninguna acción manual.
 
