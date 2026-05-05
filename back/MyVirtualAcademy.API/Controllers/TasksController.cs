@@ -27,7 +27,7 @@ namespace MyVirtualAcademy.API.Controllers
             var tarea = await repo.ObtenerTareaDetalleAsync(id, userId);
             if (tarea == null) return NotFound();
 
-            if (User.IsInRole("Profesor") || User.IsInRole("Administrador")
+            if (User.IsInRole("Profesor") || User.IsInRole("Tutor") || User.IsInRole("Administrador")
                 || User.HasClaim("IsAdmin", "true"))
             {
                 tarea.Entregas = await repo.ObtenerEntregasTareaAsync(id);
