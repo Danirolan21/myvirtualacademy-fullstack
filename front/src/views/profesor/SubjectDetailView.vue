@@ -95,7 +95,7 @@ async function confirmAddProfesor() {
   }
 }
 
-async function removeProfesor(idProfesor: number, nombre: string) {
+async function removeProfesor(idProfesor: number, _nombre: string) {
   if (!asignatura.value) return
   await removeProfesorFromSubject(asignatura.value.idAsignatura, idProfesor)
   asignatura.value.profesores = (asignatura.value.profesores ?? []).filter(p => p.idProfesor !== idProfesor)

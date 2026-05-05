@@ -1,10 +1,9 @@
 import axios from 'axios'
 
-// No baseURL — todas las llamadas van a /api/* y el proxy de Vite (dev)
-// o nginx (prod) las enruta al backend
-const client = axios.create({ withCredentials: true })
+const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
-// Adjunta el access token en memoria si existe
+const client = axios.create({ baseURL: API_BASE, withCredentials: true })
+
 client.interceptors.request.use(config => {
   const token = sessionStorage.getItem('__mva_at')
   if (token) config.headers.Authorization = `Bearer ${token}`
@@ -27,7 +26,11 @@ client.interceptors.response.use(
 
       isRefreshing = true
       try {
-        const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+        const res = await axios.post(
+          `${API_BASE}/api/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
         sessionStorage.setItem('__mva_at', res.data.accessToken)
         queue.forEach(cb => cb())
         queue = []

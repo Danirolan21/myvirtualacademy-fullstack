@@ -152,7 +152,8 @@ namespace MyVirtualAcademy.API.Controllers
             {
                 HttpOnly = true,
                 Secure = isProd,
-                SameSite = isProd ? SameSiteMode.Strict : SameSiteMode.Lax,
+                // SameSite=None requerido para cookies cross-domain (Vercel → runasp.net)
+                SameSite = isProd ? SameSiteMode.None : SameSiteMode.Lax,
                 Expires = DateTimeOffset.UtcNow.AddDays(expiryDays)
             });
         }

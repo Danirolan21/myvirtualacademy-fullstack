@@ -42,7 +42,7 @@ async function submitNewSubject() {
     const res = await createSubject(Number(route.params.id), newSubjectName.value.trim(), idProfesor)
     curso.value!.asignaturas = [
       ...(curso.value!.asignaturas ?? []),
-      { idAsignatura: res.data.idAsignatura, nombre: res.data.nombre, idCurso: res.data.idCurso }
+      { idAsignatura: res.data.idAsignatura, nombre: res.data.nombre }
     ]
     newSubjectName.value = ''
     newSubjectProfesor.value = ''
