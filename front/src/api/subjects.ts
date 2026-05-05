@@ -10,5 +10,17 @@ export const getSubjectsByProfessor = (profesorId: number) =>
 export const getSubjectsByStudent = (estudianteId: number) =>
   client.get<AsignaturaUsuarioDTO[]>(`/api/subjects/by-student/${estudianteId}`)
 
-export const createSubject = (idCurso: number, nombreAsignatura: string) =>
-  client.post('/api/subjects', { idCurso, nombreAsignatura })
+export const createSubject = (idCurso: number, nombreAsignatura: string, idProfesor?: number) =>
+  client.post('/api/subjects', { idCurso, nombreAsignatura, idProfesor: idProfesor ?? null })
+
+export const updateSubject = (id: number, nombreAsignatura: string) =>
+  client.put(`/api/subjects/${id}`, { nombreAsignatura })
+
+export const deleteSubject = (id: number) =>
+  client.delete(`/api/subjects/${id}`)
+
+export const addProfesorToSubject = (id: number, idProfesor: number) =>
+  client.post(`/api/subjects/${id}/profesores`, { idProfesor })
+
+export const removeProfesorFromSubject = (id: number, idProfesor: number) =>
+  client.delete(`/api/subjects/${id}/profesores/${idProfesor}`)

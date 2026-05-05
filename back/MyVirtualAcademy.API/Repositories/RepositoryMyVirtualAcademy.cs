@@ -312,7 +312,7 @@ namespace MyVirtualAcademy.Repositories
             return await this.context.Asignaturas.MaxAsync(a => a.IdAsignatura) + 1;
         }
 
-        public async Task<Asignatura> CreateAsignaturaAsync(int idCurso, string nombre)
+        public async Task<Asignatura> CreateAsignaturaAsync(int idCurso, string nombre, int? idProfesor = null)
         {
             var asignatura = new Asignatura
             {
@@ -321,8 +321,97 @@ namespace MyVirtualAcademy.Repositories
                 Nombre = nombre
             };
             this.context.Asignaturas.Add(asignatura);
+
+            if (idProfesor.HasValue)
+            {
+                this.context.ProfesoresAsignaturas.Add(new ProfesorAsignatura
+                {
+                    IdAsignatura = asignatura.IdAsignatura,
+                    IdProfesor = idProfesor.Value
+                });
+            }
+
             await this.context.SaveChangesAsync();
             return asignatura;
+        }
+
+        public async Task<List<VistaUsuariosConRoles>> GetProfesoresYTutoresAsync()
+        {
+            var rows = await this.context.VistaUsuariosConRoles
+                .Where(u => u.Rol == "Profesor" || u.Rol == "Tutor")
+                .ToListAsync();
+
+            // Deduplicar por IdUsuario (un usuario puede tener ambos roles)
+            return rows.GroupBy(u => u.IdUsuario)
+                .Select(g => g.First())
+                .OrderBy(u => u.Apellidos)
+                .ToList();
+        }
+
+        public async Task<Asignatura?> UpdateAsignaturaAsync(int idAsignatura, string nombre)
+        {
+            var asignatura = await this.context.Asignaturas.FindAsync(idAsignatura);
+            if (asignatura == null) return null;
+            asignatura.Nombre = nombre;
+            await this.context.SaveChangesAsync();
+            return asignatura;
+        }
+
+        public async Task<bool> DeleteAsignaturaAsync(int idAsignatura)
+        {
+            var asignatura = await this.context.Asignaturas
+                .Include(a => a.Temas).ThenInclude(t => t.Contenidos)
+                .FirstOrDefaultAsync(a => a.IdAsignatura == idAsignatura);
+            if (asignatura == null) return false;
+
+            using var tx = await this.context.Database.BeginTransactionAsync();
+            try
+            {
+                foreach (var tema in asignatura.Temas.ToList())
+                    foreach (var c in tema.Contenidos.ToList())
+                        await DeleteContenidoCascadeAsync(c.IdContenido);
+
+                this.context.Temas.RemoveRange(asignatura.Temas);
+
+                var relaciones = this.context.ProfesoresAsignaturas
+                    .Where(pa => pa.IdAsignatura == idAsignatura);
+                this.context.ProfesoresAsignaturas.RemoveRange(relaciones);
+
+                this.context.Asignaturas.Remove(asignatura);
+                await this.context.SaveChangesAsync();
+                await tx.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+        }
+
+        public async Task<(bool added, bool conflict)> AddProfesorAsignaturaAsync(int idAsignatura, int idProfesor)
+        {
+            var exists = await this.context.ProfesoresAsignaturas
+                .AnyAsync(pa => pa.IdAsignatura == idAsignatura && pa.IdProfesor == idProfesor);
+            if (exists) return (false, true);
+
+            this.context.ProfesoresAsignaturas.Add(new ProfesorAsignatura
+            {
+                IdAsignatura = idAsignatura,
+                IdProfesor = idProfesor
+            });
+            await this.context.SaveChangesAsync();
+            return (true, false);
+        }
+
+        public async Task<bool> RemoveProfesorAsignaturaAsync(int idAsignatura, int idProfesor)
+        {
+            var row = await this.context.ProfesoresAsignaturas
+                .FirstOrDefaultAsync(pa => pa.IdAsignatura == idAsignatura && pa.IdProfesor == idProfesor);
+            if (row == null) return false;
+            this.context.ProfesoresAsignaturas.Remove(row);
+            await this.context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<List<Usuario>> GetAlumnosPorCursoAsync(int idCurso)

@@ -2,9 +2,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { getSubject } from '../../api/subjects'
+import { getSubject, updateSubject, addProfesorToSubject, removeProfesorFromSubject } from '../../api/subjects'
 import { createTopic, deleteTopic } from '../../api/topics'
 import { deleteContent } from '../../api/content'
+import client from '../../api/client'
 import Swal from 'sweetalert2'
 import type { AsignaturaDetalle, TemaVM, ContenidoVM } from '../../types'
 import ContentForm from '../../components/ContentForm.vue'
@@ -28,6 +29,77 @@ const savingTopic = ref(false)
 const canEdit = computed(() => ['Profesor', 'Tutor', 'Administrador'].includes(auth.role) || auth.isAdmin)
 
 const hasTemas = computed(() => (asignatura.value?.temas?.length ?? 0) > 0)
+
+// Editar nombre de asignatura
+const editingName = ref(false)
+const editingNameValue = ref('')
+const savingName = ref(false)
+
+function startEditName() {
+  editingNameValue.value = asignatura.value?.nombreAsignatura ?? ''
+  editingName.value = true
+}
+
+async function saveEditName() {
+  if (!editingNameValue.value.trim() || !asignatura.value) return
+  savingName.value = true
+  try {
+    await updateSubject(asignatura.value.idAsignatura, editingNameValue.value.trim())
+    asignatura.value.nombreAsignatura = editingNameValue.value.trim()
+    editingName.value = false
+  } finally {
+    savingName.value = false
+  }
+}
+
+// Gestión de profesores
+interface ProfesorItem { idUsuario: number; nombreCompleto: string }
+const profesoresDisponibles = ref<ProfesorItem[]>([])
+const showAddProfesor = ref(false)
+const selectedProfesorId = ref<number | ''>('')
+const addingProfesor = ref(false)
+
+async function loadProfesores() {
+  try {
+    const res = await client.get<ProfesorItem[]>('/api/users/profesores')
+    profesoresDisponibles.value = res.data
+  } catch { /* no bloquea */ }
+}
+
+function openAddProfesor() {
+  showAddProfesor.value = true
+  if (!profesoresDisponibles.value.length) loadProfesores()
+}
+
+const profesoresDisponiblesFiltrados = computed(() => {
+  const asignados = new Set((asignatura.value?.profesores ?? []).map(p => p.idProfesor))
+  return profesoresDisponibles.value.filter(p => !asignados.has(p.idUsuario))
+})
+
+async function confirmAddProfesor() {
+  if (selectedProfesorId.value === '' || !asignatura.value) return
+  addingProfesor.value = true
+  try {
+    await addProfesorToSubject(asignatura.value.idAsignatura, Number(selectedProfesorId.value))
+    const p = profesoresDisponibles.value.find(x => x.idUsuario === selectedProfesorId.value)
+    if (p) {
+      asignatura.value.profesores = [
+        ...(asignatura.value.profesores ?? []),
+        { idProfesor: p.idUsuario, nombreProfesor: p.nombreCompleto, fotoPerfil: null }
+      ]
+    }
+    showAddProfesor.value = false
+    selectedProfesorId.value = ''
+  } finally {
+    addingProfesor.value = false
+  }
+}
+
+async function removeProfesor(idProfesor: number, nombre: string) {
+  if (!asignatura.value) return
+  await removeProfesorFromSubject(asignatura.value.idAsignatura, idProfesor)
+  asignatura.value.profesores = (asignatura.value.profesores ?? []).filter(p => p.idProfesor !== idProfesor)
+}
 
 // selectedTemaId persists across load() because we store the ID, not the object
 const selectedTemaId = ref<number | null>(null)
@@ -161,15 +233,71 @@ async function saveTopic() {
       <!-- ===== SIDEBAR ===== -->
       <aside class="sidebar" :class="{ 'sidebar-mobile-open': mobileSidebarOpen }">
         <div class="sidebar-header">
-          <div class="sidebar-subject-name">{{ asignatura.nombreAsignatura }}</div>
+          <!-- Nombre editable -->
+          <div v-if="!editingName" class="sidebar-subject-name-wrap">
+            <span class="sidebar-subject-name">{{ asignatura.nombreAsignatura }}</span>
+            <button v-if="canEdit" class="edit-name-btn" title="Editar nombre" @click="startEditName">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+          </div>
+          <div v-else class="sidebar-name-edit">
+            <input
+              v-model="editingNameValue"
+              class="form-control form-control-sm"
+              @keydown.enter.prevent="saveEditName"
+              @keydown.escape="editingName = false"
+              autofocus
+            />
+            <div class="name-edit-actions">
+              <button class="btn btn-primary btn-xs" :disabled="savingName" @click="saveEditName">
+                <i v-if="savingName" class="fas fa-spinner fa-spin"></i>
+                <i v-else class="fas fa-check"></i>
+              </button>
+              <button class="btn btn-outline-secondary btn-xs" @click="editingName = false">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Profesores -->
           <div class="sidebar-teachers">
-            <span v-for="p in asignatura.profesores" :key="p.idProfesor" class="teacher-pill">
-              <div class="teacher-av">
-                <img v-if="p.fotoPerfil" :src="`/assets/images/users/${p.fotoPerfil}`" :alt="p.nombreProfesor" />
-                <span v-else>{{ p.nombreProfesor[0] }}</span>
+            <template v-if="(asignatura.profesores ?? []).length > 0">
+              <span v-for="p in asignatura.profesores" :key="p.idProfesor" class="teacher-pill">
+                <div class="teacher-av">
+                  <img v-if="p.fotoPerfil" :src="`/assets/images/users/${p.fotoPerfil}`" :alt="p.nombreProfesor" />
+                  <span v-else>{{ p.nombreProfesor[0] }}</span>
+                </div>
+                {{ p.nombreProfesor }}
+                <button v-if="canEdit" class="remove-profesor-btn" title="Desasignar profesor" @click="removeProfesor(p.idProfesor, p.nombreProfesor)">
+                  <i class="fas fa-times"></i>
+                </button>
+              </span>
+            </template>
+            <span v-else-if="!canEdit" class="no-profesor-text">Sin profesor asignado</span>
+          </div>
+
+          <!-- Añadir profesor (solo canEdit) -->
+          <div v-if="canEdit" class="add-profesor-area">
+            <div v-if="showAddProfesor" class="add-profesor-form">
+              <select v-model="selectedProfesorId" class="form-control form-control-sm">
+                <option value="">— Selecciona un profesor —</option>
+                <option v-for="p in profesoresDisponiblesFiltrados" :key="p.idUsuario" :value="p.idUsuario">
+                  {{ p.nombreCompleto }}
+                </option>
+              </select>
+              <div class="name-edit-actions">
+                <button class="btn btn-primary btn-xs" :disabled="addingProfesor || selectedProfesorId === ''" @click="confirmAddProfesor">
+                  <i v-if="addingProfesor" class="fas fa-spinner fa-spin"></i>
+                  <i v-else class="fas fa-check"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-xs" @click="showAddProfesor = false; selectedProfesorId = ''">
+                  <i class="fas fa-times"></i>
+                </button>
               </div>
-              {{ p.nombreProfesor }}
-            </span>
+            </div>
+            <button v-else class="add-profesor-btn" @click="openAddProfesor">
+              <i class="fas fa-plus"></i> Añadir profesor
+            </button>
           </div>
         </div>
 
@@ -407,14 +535,78 @@ async function saveTopic() {
   border-bottom: 1px solid var(--color-border);
   background: linear-gradient(135deg, #e8f4fd, #dbeafe);
 }
+.sidebar-subject-name-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
 .sidebar-subject-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
-  margin-bottom: var(--sp-3);
   line-height: 1.4;
+  flex: 1;
 }
-.sidebar-teachers { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.edit-name-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.edit-name-btn:hover { color: var(--color-primary); background: rgba(0,0,0,0.05); }
+
+.sidebar-name-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.name-edit-actions { display: flex; gap: var(--sp-1); }
+.btn-xs {
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-teachers { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.no-profesor-text { font-size: var(--font-size-xs); color: var(--color-muted); font-style: italic; }
+
+.remove-profesor-btn {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 9px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: color 0.15s;
+  margin-left: 2px;
+}
+.remove-profesor-btn:hover { color: var(--color-danger); }
+
+.add-profesor-area { margin-top: var(--sp-1); }
+.add-profesor-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+}
+.add-profesor-btn:hover { text-decoration: underline; }
+.add-profesor-form { display: flex; flex-direction: column; gap: var(--sp-2); }
 .teacher-pill {
   display: inline-flex;
   align-items: center;

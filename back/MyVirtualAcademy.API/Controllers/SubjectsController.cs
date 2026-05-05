@@ -47,10 +47,57 @@ namespace MyVirtualAcademy.API.Controllers
             if (string.IsNullOrWhiteSpace(request.NombreAsignatura))
                 return BadRequest(new { message = "El nombre de la asignatura es obligatorio." });
 
-            var asignatura = await repo.CreateAsignaturaAsync(request.IdCurso, request.NombreAsignatura.Trim());
+            var asignatura = await repo.CreateAsignaturaAsync(
+                request.IdCurso,
+                request.NombreAsignatura.Trim(),
+                request.IdProfesor);
+
             return Ok(new { asignatura.IdAsignatura, asignatura.Nombre, asignatura.IdCurso });
         }
 
-        public record CreateSubjectRequest(int IdCurso, string NombreAsignatura);
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateSubjectRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.NombreAsignatura))
+                return BadRequest(new { message = "El nombre de la asignatura es obligatorio." });
+
+            var updated = await repo.UpdateAsignaturaAsync(id, request.NombreAsignatura.Trim());
+            if (updated == null) return NotFound();
+
+            return Ok(new { updated.IdAsignatura, updated.Nombre });
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var ok = await repo.DeleteAsignaturaAsync(id);
+            if (!ok) return NotFound();
+            return Ok(new { message = "Asignatura eliminada." });
+        }
+
+        [HttpPost("{id:int}/profesores")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> AddProfesor(int id, [FromBody] AddProfesorRequest request)
+        {
+            var (added, conflict) = await repo.AddProfesorAsignaturaAsync(id, request.IdProfesor);
+            if (conflict) return Conflict(new { message = "El profesor ya está asignado a esta asignatura." });
+            if (!added) return NotFound();
+            return Ok(new { message = "Profesor asignado." });
+        }
+
+        [HttpDelete("{id:int}/profesores/{idProfesor:int}")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> RemoveProfesor(int id, int idProfesor)
+        {
+            var ok = await repo.RemoveProfesorAsignaturaAsync(id, idProfesor);
+            if (!ok) return NotFound();
+            return Ok(new { message = "Profesor desasignado." });
+        }
+
+        public record CreateSubjectRequest(int IdCurso, string NombreAsignatura, int? IdProfesor);
+        public record UpdateSubjectRequest(string NombreAsignatura);
+        public record AddProfesorRequest(int IdProfesor);
     }
 }

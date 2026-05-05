@@ -3,7 +3,9 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getCourse, getEnrollments } from '../../api/courses'
-import { createSubject } from '../../api/subjects'
+import { createSubject, deleteSubject } from '../../api/subjects'
+import client from '../../api/client'
+import Swal from 'sweetalert2'
 import { formatDate } from '../../utils/format'
 import type { CourseDetailResponse, Inscripcion } from '../../types'
 
@@ -14,9 +16,20 @@ const loading = ref(true)
 const error = ref(false)
 const activeTab = ref<'asignaturas' | 'alumnos' | 'evaluacion' | 'configuracion'>('asignaturas')
 
+// Lista de profesores para el select de nueva asignatura
+interface ProfesorItem { idUsuario: number; nombreCompleto: string }
+const profesores = ref<ProfesorItem[]>([])
+async function loadProfesores() {
+  try {
+    const res = await client.get<ProfesorItem[]>('/api/users/profesores')
+    profesores.value = res.data
+  } catch { /* no bloquea el resto de la vista */ }
+}
+
 // Nueva asignatura
 const showNewSubjectForm = ref(false)
 const newSubjectName = ref('')
+const newSubjectProfesor = ref<number | ''>('')
 const savingSubject = ref(false)
 const subjectError = ref('')
 
@@ -25,18 +38,35 @@ async function submitNewSubject() {
   savingSubject.value = true
   subjectError.value = ''
   try {
-    const res = await createSubject(Number(route.params.id), newSubjectName.value.trim())
+    const idProfesor = newSubjectProfesor.value !== '' ? Number(newSubjectProfesor.value) : undefined
+    const res = await createSubject(Number(route.params.id), newSubjectName.value.trim(), idProfesor)
     curso.value!.asignaturas = [
       ...(curso.value!.asignaturas ?? []),
       { idAsignatura: res.data.idAsignatura, nombre: res.data.nombre, idCurso: res.data.idCurso }
     ]
     newSubjectName.value = ''
+    newSubjectProfesor.value = ''
     showNewSubjectForm.value = false
   } catch (e: any) {
     subjectError.value = e?.response?.data?.message ?? 'Error al crear la asignatura.'
   } finally {
     savingSubject.value = false
   }
+}
+
+async function confirmDeleteSubject(idAsignatura: number, nombre: string) {
+  const result = await Swal.fire({
+    title: `¿Eliminar "${nombre}"?`,
+    text: 'Se eliminarán todos sus módulos y contenidos. Esta acción no se puede deshacer.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc3545',
+  })
+  if (!result.isConfirmed) return
+  await deleteSubject(idAsignatura)
+  curso.value!.asignaturas = (curso.value!.asignaturas ?? []).filter(a => a.idAsignatura !== idAsignatura)
 }
 
 const enrollments = ref<Inscripcion[]>([])
@@ -130,7 +160,7 @@ const statusClass: Record<string, string> = {
           <!-- Cabecera con botón nueva asignatura -->
           <div v-if="auth.isAdmin" class="subjects-toolbar">
             <span class="subjects-count">{{ curso.asignaturas?.length ?? 0 }} asignatura{{ (curso.asignaturas?.length ?? 0) !== 1 ? 's' : '' }}</span>
-            <button class="btn btn-primary btn-sm" @click="showNewSubjectForm = !showNewSubjectForm">
+            <button class="btn btn-primary btn-sm" @click="showNewSubjectForm = !showNewSubjectForm; if (showNewSubjectForm) loadProfesores()">
               <i class="fas fa-plus"></i> Nueva asignatura
             </button>
           </div>
@@ -146,6 +176,10 @@ const statusClass: Record<string, string> = {
               @keydown.enter.prevent="submitNewSubject"
               @keydown.escape="showNewSubjectForm = false"
             />
+            <select v-model="newSubjectProfesor" class="form-control">
+              <option value="">— Sin profesor asignado —</option>
+              <option v-for="p in profesores" :key="p.idUsuario" :value="p.idUsuario">{{ p.nombreCompleto }}</option>
+            </select>
             <div class="new-subject-actions">
               <button class="btn btn-primary btn-sm" :disabled="savingSubject || !newSubjectName.trim()" @click="submitNewSubject">
                 <i v-if="savingSubject" class="fas fa-spinner fa-spin"></i>
@@ -160,19 +194,31 @@ const statusClass: Record<string, string> = {
           </div>
 
           <div v-if="curso.asignaturas?.length" class="subject-list">
-            <RouterLink
+            <div
               v-for="asig in curso.asignaturas"
               :key="asig.idAsignatura"
-              :to="`/asignatura/${asig.idAsignatura}`"
-              class="subject-row"
+              class="subject-row-wrap"
             >
-              <div class="subject-icon"><i class="fas fa-book"></i></div>
-              <div class="subject-info">
-                <div class="subject-name">{{ asig.nombre ?? asig.nombreAsignatura }}</div>
-                <div class="subject-meta" v-if="asig.numeroTemas != null">{{ asig.numeroTemas }} módulos &bull; {{ asig.numeroContenidos ?? 0 }} contenidos</div>
-              </div>
-              <i class="fas fa-arrow-right subject-arrow"></i>
-            </RouterLink>
+              <RouterLink
+                :to="`/asignatura/${asig.idAsignatura}`"
+                class="subject-row"
+              >
+                <div class="subject-icon"><i class="fas fa-book"></i></div>
+                <div class="subject-info">
+                  <div class="subject-name">{{ asig.nombre ?? asig.nombreAsignatura }}</div>
+                  <div class="subject-meta" v-if="asig.numeroTemas != null">{{ asig.numeroTemas }} módulos &bull; {{ asig.numeroContenidos ?? 0 }} contenidos</div>
+                </div>
+                <i class="fas fa-arrow-right subject-arrow"></i>
+              </RouterLink>
+              <button
+                v-if="auth.isAdmin"
+                class="subject-delete-btn"
+                title="Eliminar asignatura"
+                @click.prevent="confirmDeleteSubject(asig.idAsignatura, asig.nombre ?? asig.nombreAsignatura ?? '')"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </div>
           <div v-else-if="!showNewSubjectForm" class="empty-tab">
             <i class="fas fa-book"></i>
@@ -346,18 +392,37 @@ const statusClass: Record<string, string> = {
 }
 
 .subject-list { display: flex; flex-direction: column; }
+.subject-row-wrap {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+}
+.subject-row-wrap:last-child { border-bottom: none; }
 .subject-row {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: var(--sp-4);
   padding: var(--sp-4) var(--sp-5);
-  border-bottom: 1px solid var(--color-border);
   text-decoration: none;
   color: var(--color-text);
   transition: background 0.15s;
 }
-.subject-row:last-child { border-bottom: none; }
 .subject-row:hover { background: var(--color-muted-bg); }
+.subject-delete-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  padding: 0 var(--sp-4);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.subject-row-wrap:hover .subject-delete-btn { opacity: 1; }
+.subject-delete-btn:hover { background: #fef2f2; color: var(--color-danger); }
 .subject-icon {
   width: 32px; height: 32px;
   background: var(--color-muted-bg);
