@@ -48,8 +48,8 @@ export interface Asignatura {
 export interface ProfesorVM {
   idProfesor: number
   nombreProfesor: string
-  apellidosProfesor: string
-  fotoPerfil?: string
+  apellidosProfesor?: string
+  fotoPerfil?: string | null
 }
 
 export interface ContenidoVM {
