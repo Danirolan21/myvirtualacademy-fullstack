@@ -162,8 +162,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 app.UseCors("AllowFront");
+app.UseStaticFiles();
 app.UseResponseCaching();
 app.UseRateLimiter();
 app.UseAuthentication();
