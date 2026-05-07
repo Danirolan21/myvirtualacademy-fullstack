@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import client from '../api/client'
 import type { AuthUser } from '../types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function silentRefresh(): Promise<boolean> {
     isLoading.value = true
     try {
-      const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+      const res = await client.post('/api/auth/refresh', {})
       setSession(res.data.accessToken, res.data.user)
       return true
     } catch {
@@ -39,15 +39,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(email: string, password: string) {
-    const res = await axios.post('/api/auth/login',
-      { email, password }, { withCredentials: true })
+    const res = await client.post('/api/auth/login', { email, password })
     setSession(res.data.accessToken, res.data.user)
     return res.data.user as AuthUser
   }
 
   async function logout() {
     try {
-      await axios.post('/api/auth/logout', {}, { withCredentials: true })
+      await client.post('/api/auth/logout', {})
     } finally {
       clearSession()
     }
