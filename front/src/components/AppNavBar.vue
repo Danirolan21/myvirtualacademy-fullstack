@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import { getNotifications, getUnreadCount, markRead, markAllRead } from '../api/notifications'
 import type { Notificacion } from '../api/notifications'
+import { userAvatar } from '../utils/images'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -186,7 +187,7 @@ onUnmounted(() => {
         <div v-if="auth.isAuthenticated" class="user-menu" ref="userMenuRef">
           <button class="user-toggle" @click="dropdownOpen = !dropdownOpen" type="button">
             <img
-              :src="`/assets/images/users/${auth.user?.fotoPerfil}`"
+              :src="userAvatar(auth.user?.fotoPerfil)"
               class="user-avatar"
               alt="Avatar"
             />

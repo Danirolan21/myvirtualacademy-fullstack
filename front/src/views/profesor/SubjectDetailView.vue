@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getSubject, updateSubject, addProfesorToSubject, removeProfesorFromSubject } from '../../api/subjects'
+import { userAvatar } from '../../utils/images'
 import { createTopic, deleteTopic } from '../../api/topics'
 import { deleteContent } from '../../api/content'
 import client from '../../api/client'
@@ -264,7 +265,7 @@ async function saveTopic() {
             <template v-if="(asignatura.profesores ?? []).length > 0">
               <span v-for="p in asignatura.profesores" :key="p.idProfesor" class="teacher-pill">
                 <div class="teacher-av">
-                  <img v-if="p.fotoPerfil" :src="`/assets/images/users/${p.fotoPerfil}`" :alt="p.nombreProfesor" />
+                  <img v-if="p.fotoPerfil" :src="userAvatar(p.fotoPerfil)" :alt="p.nombreProfesor" />
                   <span v-else>{{ p.nombreProfesor[0] }}</span>
                 </div>
                 {{ p.nombreProfesor }}

@@ -5,6 +5,7 @@ import { formatDate } from '../../utils/format'
 import { getCoursesByProfessor } from '../../api/courses'
 import { getSubjectsByProfessor } from '../../api/subjects'
 import type { VistaCursosDetalles, VistaAsignaturasProfesor } from '../../types'
+import { courseCover } from '../../utils/images'
 
 const auth = useAuthStore()
 const activeTab = ref<'cursos' | 'asignaturas'>('cursos')
@@ -48,7 +49,7 @@ const statusClass: Record<string, string> = {
       <div v-else-if="activeTab === 'cursos'">
         <div v-if="cursos.length" class="cards-grid">
           <div class="course-card" v-for="curso in cursos" :key="curso.idCurso">
-            <div class="card-cover" :style="{ backgroundImage: `url('/assets/images/courses/${curso.imagenPortada}')` }">
+            <div class="card-cover" :style="{ backgroundImage: `url('${courseCover(curso.imagenPortada)}')` }">
               <span class="badge" :class="statusClass[curso.estado] ?? 'badge-secondary'">{{ curso.estado }}</span>
             </div>
             <div class="card-body">

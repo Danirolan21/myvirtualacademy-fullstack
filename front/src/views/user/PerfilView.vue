@@ -6,6 +6,7 @@ import { getCoursesByProfessor } from '../../api/courses'
 import { getSubjectsByStudent } from '../../api/subjects'
 import { formatDate } from '../../utils/format'
 import type { Usuario, VistaCursosDetalles, AsignaturaUsuarioDTO } from '../../types'
+import { userAvatar, courseCover } from '../../utils/images'
 
 const auth = useAuthStore()
 
@@ -166,7 +167,7 @@ async function submit() {
           <!-- Avatar -->
           <div class="avatar-wrap">
             <img
-              :src="(editing && avatarPreview) ? avatarPreview : `/assets/images/users/${auth.user?.fotoPerfil}`"
+              :src="(editing && avatarPreview) ? avatarPreview : userAvatar(auth.user?.fotoPerfil)"
               class="avatar-img"
               alt="Avatar"
             />
@@ -203,7 +204,7 @@ async function submit() {
           <div v-if="cursos.length" class="course-list">
             <RouterLink v-for="c in cursos" :key="c.idCurso" :to="c.linkTo ?? '/'" class="course-mini-card">
               <div class="course-mini-cover">
-                <img v-if="c.imagenPortada" :src="`/assets/images/courses/${c.imagenPortada}`" :alt="c.nombreCurso" />
+                <img v-if="c.imagenPortada" :src="courseCover(c.imagenPortada)" :alt="c.nombreCurso" />
                 <div v-else class="course-mini-cover-fallback"><i class="fas fa-graduation-cap"></i></div>
               </div>
               <div class="course-mini-info">

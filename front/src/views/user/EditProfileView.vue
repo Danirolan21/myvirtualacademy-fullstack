@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/auth'
 import { getUser, updateUser } from '../../api/users'
 import { formatDate } from '../../utils/format'
 import type { Usuario } from '../../types'
+import { userAvatar } from '../../utils/images'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -60,7 +61,7 @@ async function submit() {
           <!-- Avatar with upload pencil -->
           <div class="avatar-wrap">
             <img
-              :src="avatarPreview ?? `/assets/images/users/${auth.user?.fotoPerfil}`"
+              :src="avatarPreview ?? userAvatar(auth.user?.fotoPerfil)"
               class="avatar-img"
               alt="Avatar"
             />

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { VistaCursosDetalles } from '../types'
 import { formatDate } from '../utils/format'
+import { courseCover } from '../utils/images'
 
 defineProps<{ curso: VistaCursosDetalles; adminMode?: boolean }>()
 const emit = defineEmits<{ (e: 'options', id: number): void }>()
@@ -21,7 +22,7 @@ const statusClass: Record<string, string> = {
       <!-- Cover image -->
       <div
         class="course-cover"
-        :style="{ backgroundImage: `url('/assets/images/courses/${curso.imagenPortada}')` }"
+        :style="{ backgroundImage: `url('${courseCover(curso.imagenPortada)}')` }"
         role="img"
         :aria-label="`Portada de ${curso.nombreCurso}`"
       >
