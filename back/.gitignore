@@ -5,8 +5,13 @@ obj/
 .vs/
 appsettings.Development.json
 
-## Uploads (no subir archivos de usuarios)
+## Uploads y assets generados por usuarios
 MyVirtualAcademy.API/wwwroot/uploads/
+MyVirtualAcademy.API/wwwroot/assets/images/users/
+MyVirtualAcademy.API/wwwroot/assets/images/courses/
+
+## Carpeta de publicación
+MyVirtualAcademy.API/publish/
 
 ## Build artifacts
 *.nupkg

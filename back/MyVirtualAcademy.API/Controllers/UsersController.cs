@@ -28,6 +28,20 @@ namespace MyVirtualAcademy.API.Controllers
             return Ok(users); // already grouped by user with concatenated roles
         }
 
+        [HttpGet("profesores")]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> GetProfesores()
+        {
+            var profesores = await repo.GetProfesoresYTutoresAsync();
+            return Ok(profesores.Select(p => new
+            {
+                idUsuario = p.IdUsuario,
+                nombre = p.Nombre,
+                apellidos = p.Apellidos,
+                nombreCompleto = $"{p.Nombre} {p.Apellidos}"
+            }));
+        }
+
         [HttpPut("{id:int}/toggle-active")]
         [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> ToggleActive(int id)

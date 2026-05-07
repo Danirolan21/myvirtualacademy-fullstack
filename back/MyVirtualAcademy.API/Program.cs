@@ -52,7 +52,12 @@ builder.Services.AddSwaggerGen(c =>
 // Base de datos
 builder.Services.AddDbContext<MyVirtualAcademyContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("SqlMyVirtualAcademy")));
+        builder.Configuration.GetConnectionString("SqlMyVirtualAcademy"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null
+        )));
 
 // Servicios propios
 builder.Services.AddHttpContextAccessor();
@@ -81,7 +86,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Políticas de autorización
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ProfesorUTutor",
@@ -90,7 +94,6 @@ builder.Services.AddAuthorization(options =>
         policy => policy.RequireClaim("IsAdmin", "true"));
 });
 
-// Rate limiting — solo para el endpoint de login
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("login", limiterOptions =>
@@ -109,7 +112,6 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// CORS
 var allowedOrigins = builder.Configuration
     .GetSection("AllowedOrigins").Get<string[]>() ?? [];
 
@@ -117,22 +119,39 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFront", policy =>
         policy.WithOrigins(allowedOrigins)
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials());
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials());
 });
 
 var app = builder.Build();
 
-// Manejador de errores global — devuelve JSON en lugar de HTML
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
     {
+        var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var ex = feature?.Error;
+        
+        if (ex != null)
+        {
+            try
+            {
+                var logContent = $"[{DateTime.Now:o}] {context.Request.Method} {context.Request.Path}\n{ex}\n\nINNER:\n{ex.InnerException}\n\n---\n";
+                File.AppendAllText(Path.Combine("D:\\Sites\\site67425\\wwwroot", "runtime-errors.log"), logContent);
+            }
+            catch { }
+        }
+
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(
-            new { error = "Se ha producido un error interno." });
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "Se ha producido un error interno.",
+            message = ex?.Message,
+            inner = ex?.InnerException?.Message,
+            type = ex?.GetType().FullName
+        });
     });
 });
 
@@ -144,15 +163,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
-// CORS debe ir antes de Authentication/Authorization
 app.UseCors("AllowFront");
-
 app.UseResponseCaching();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
