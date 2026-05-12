@@ -534,7 +534,13 @@ onUnmounted(() => {
   margin-top: 6px;
 }
 
-@media (max-width: 400px) {
-  .bell-dropdown { width: calc(100vw - 2rem); right: -3rem; }
+@media (max-width: 768px) {
+  .bell-dropdown {
+    position: fixed;
+    top: var(--navbar-height);
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
 }
 </style>
