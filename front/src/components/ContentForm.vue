@@ -3,14 +3,14 @@ import { ref, computed } from 'vue'
 import { createContent } from '../api/content'
 import FileUploader from './FileUploader.vue'
 
-const props = defineProps<{ idTema: number; idAsignatura: number }>()
+const props = defineProps<{ idTema: number; idAsignatura: number; nextOrden?: number }>()
 const emit = defineEmits<{ (e: 'saved'): void; (e: 'cancel'): void }>()
 
 const form = ref({
   titulo: '',
   descripcion: '',
   tipo: 'Video',
-  orden: 1,
+  orden: props.nextOrden ?? 1,
   urlContenido: '',
   fechaEntrega: '',
   puntuacionMaxima: 10,

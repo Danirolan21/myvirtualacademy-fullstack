@@ -203,6 +203,11 @@ async function confirmDeleteContenido(idContenido: number, titulo: string) {
   await load()
 }
 
+function openTopicModal() {
+  newTopic.value = { nombre: '', orden: (asignatura.value?.temas?.length ?? 0) + 1 }
+  showTopicModal.value = true
+}
+
 async function saveTopic() {
   if (!asignatura.value) return
   savingTopic.value = true
@@ -351,7 +356,7 @@ async function saveTopic() {
         </nav>
 
         <div v-if="canEdit" class="sidebar-footer">
-          <button class="add-topic-btn" @click="showTopicModal = true">
+          <button class="add-topic-btn" @click="openTopicModal()">
             <i class="fas fa-plus"></i> Añadir módulo
           </button>
         </div>
@@ -365,7 +370,7 @@ async function saveTopic() {
           <div class="empty-selection-icon"><i class="fas fa-layer-group"></i></div>
           <h3 class="empty-selection-title">Esta asignatura aún no tiene módulos</h3>
           <p class="empty-selection-desc">Crea el primer módulo para empezar a añadir material.</p>
-          <button v-if="canEdit" class="btn btn-primary btn-add-first" @click="showTopicModal = true">
+          <button v-if="canEdit" class="btn btn-primary btn-add-first" @click="openTopicModal()">
             <i class="fas fa-plus"></i> Añadir primer módulo
           </button>
         </div>
@@ -416,6 +421,7 @@ async function saveTopic() {
               <ContentForm
                 :id-tema="selectedContent.tema.idTema!"
                 :id-asignatura="asignatura.idAsignatura"
+                :next-orden="(selectedContent.tema.contenidos?.length ?? 0) + 1"
                 @saved="() => { addingContentFor = null; load() }"
                 @cancel="addingContentFor = null"
               />
@@ -451,6 +457,7 @@ async function saveTopic() {
               <ContentForm
                 :id-tema="selectedTema.idTema!"
                 :id-asignatura="asignatura.idAsignatura"
+                :next-orden="(selectedTema.contenidos?.length ?? 0) + 1"
                 @saved="() => { addingContentFor = null; load() }"
                 @cancel="addingContentFor = null"
               />
