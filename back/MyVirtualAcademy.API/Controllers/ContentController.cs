@@ -113,6 +113,10 @@ namespace MyVirtualAcademy.API.Controllers
                 await request.ArchivoContenido.CopyToAsync(stream);
                 urlContenido = fileName;
             }
+            else if (!string.IsNullOrWhiteSpace(request.UrlContenido))
+            {
+                urlContenido = request.UrlContenido;
+            }
 
             var model = new TareaEditViewModel
             {
@@ -160,6 +164,7 @@ namespace MyVirtualAcademy.API.Controllers
             string? Descripcion,
             DateTime? FechaEntrega,
             decimal? PuntuacionMaxima,
-            IFormFile? ArchivoContenido);
+            IFormFile? ArchivoContenido,
+            string? UrlContenido);
     }
 }
