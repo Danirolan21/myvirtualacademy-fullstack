@@ -131,6 +131,10 @@ namespace MyVirtualAcademy.API.Controllers
         [Authorize(Policy = "ProfesorUTutor")]
         public async Task<IActionResult> Delete(int id)
         {
+            var contenido = await repo.ObtenerContenidoPorIdAsync(id);
+            if (contenido == null) return NotFound(new { message = "Contenido no encontrado" });
+            if (contenido.Tipo == "Examen" || contenido.Tipo == "Quiz")
+                return BadRequest(new { message = "No se pueden eliminar contenidos de tipo examen mientras el módulo está en desarrollo." });
             var ok = await repo.DeleteContenidoAsync(id);
             if (!ok) return NotFound(new { message = "Contenido no encontrado" });
             return Ok(new { message = "Contenido eliminado correctamente" });
