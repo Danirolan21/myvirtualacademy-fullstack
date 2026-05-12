@@ -825,11 +825,12 @@ namespace MyVirtualAcademy.Repositories
                 .GroupBy(pa => pa.IdAsignatura)
                 .ToDictionaryAsync(g => g.Key, g => $"{g.First().Profesor.Nombre} {g.First().Profesor.Apellidos}");
 
-            // 🔹 Obtener el progreso del usuario en cada asignatura
+            // 🔹 Obtener el progreso del usuario por (inscripción, asignatura)
             var progresoDict = await this.context.ProgresoInscripciones
                 .Where(p => p.Completo)
-                .GroupBy(p => p.IdInscripcion)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
+                .Select(p => new { p.IdInscripcion, p.Contenido.Tema.IdAsignatura })
+                .GroupBy(x => new { x.IdInscripcion, x.IdAsignatura })
+                .ToDictionaryAsync(g => (g.Key.IdInscripcion, g.Key.IdAsignatura), g => g.Count());
 
             var resultado = new List<AsignaturaUsuarioDTO>();
 
@@ -849,9 +850,8 @@ namespace MyVirtualAcademy.Repositories
                         .Where(c => c.Tema.IdAsignatura == asignatura.IdAsignatura)
                         .CountAsync();
 
-                    var contenidosCompletados = progresoDict.ContainsKey(inscripcion.IdInscripcion)
-                        ? progresoDict[inscripcion.IdInscripcion]
-                        : 0;
+                    var contenidosCompletados = progresoDict.TryGetValue(
+                        (inscripcion.IdInscripcion, asignatura.IdAsignatura), out var count) ? count : 0;
 
                     var progreso = contenidosTotales > 0
                         ? (decimal)contenidosCompletados / contenidosTotales * 100
