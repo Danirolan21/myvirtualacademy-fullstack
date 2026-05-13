@@ -34,7 +34,6 @@ async function openBell() {
     try {
       const res = await getNotifications()
       notifications.value = res.data
-      unreadCount.value = 0
     } catch { /* ignore */ }
   }
 }
@@ -55,6 +54,7 @@ async function handleMarkRead(n: Notificacion) {
 function notifIcon(tipo: string) {
   if (tipo === 'entrega') return 'fas fa-file-upload'
   if (tipo === 'calificacion') return 'fas fa-star'
+  if (tipo === 'contenido') return 'fas fa-book-open'
   return 'fas fa-user-check'
 }
 
@@ -520,6 +520,7 @@ onUnmounted(() => {
 .bell-icon--entrega { background: #dcfce7; color: #16a34a; }
 .bell-icon--calificacion { background: #fef9c3; color: #ca8a04; }
 .bell-icon--inscripcion { background: #ede9fe; color: #7c3aed; }
+.bell-icon--contenido { background: #dbeafe; color: #2563eb; }
 
 .bell-item-body { flex: 1; min-width: 0; }
 .bell-item-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text); }

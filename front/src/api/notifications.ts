@@ -2,7 +2,7 @@ import client from './client'
 
 export interface Notificacion {
   idNotificacion: number
-  tipo: 'entrega' | 'calificacion' | 'inscripcion'
+  tipo: 'entrega' | 'calificacion' | 'inscripcion' | 'contenido'
   titulo: string
   mensaje: string
   leida: boolean

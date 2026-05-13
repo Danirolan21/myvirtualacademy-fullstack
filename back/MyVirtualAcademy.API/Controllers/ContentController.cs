@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyVirtualAcademy.API.Services;
 using MyVirtualAcademy.Helper;
 using MyVirtualAcademy.Models;
 using MyVirtualAcademy.Repositories;
@@ -14,11 +15,13 @@ namespace MyVirtualAcademy.API.Controllers
     {
         private readonly RepositoryMyVirtualAcademy repo;
         private readonly HelperPathProvider helperPath;
+        private readonly NotificationService notifService;
 
-        public ContentController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath)
+        public ContentController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath, NotificationService notifService)
         {
             this.repo = repo;
             this.helperPath = helperPath;
+            this.notifService = notifService;
         }
 
         [HttpGet("{id:int}")]
@@ -95,6 +98,8 @@ namespace MyVirtualAcademy.API.Controllers
                     request.PenalizacionIncorrecta ?? 0);
             }
 
+            var profesorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            try { await notifService.NotifyNewContentAsync(contenido.IdContenido, profesorId); } catch { }
             return Ok(new { contenido.IdContenido, idAsignatura = contenido.Tema.IdAsignatura });
         }
 

@@ -66,5 +66,38 @@ namespace MyVirtualAcademy.API.Services
             });
             await context.SaveChangesAsync();
         }
+
+        public async Task NotifyNewContentAsync(int contenidoId, int profesorId)
+        {
+            var info = await context.Contenidos
+                .Where(c => c.IdContenido == contenidoId)
+                .Select(c => new { c.Titulo, c.Tema.IdAsignatura })
+                .FirstOrDefaultAsync();
+            if (info == null) return;
+
+            var estudianteIds = await context.Inscripciones
+                .Where(i => i.Estado == "Activo" &&
+                    context.Asignaturas
+                        .Where(a => a.IdAsignatura == info.IdAsignatura)
+                        .Select(a => a.IdCurso)
+                        .Contains(i.IdCurso))
+                .Select(i => i.IdEstudiante)
+                .Distinct()
+                .ToListAsync();
+
+            if (!estudianteIds.Any()) return;
+
+            context.Notificaciones.AddRange(estudianteIds.Select(id => new Notificacion
+            {
+                IdUsuario = id,
+                Tipo = "contenido",
+                Titulo = "Nuevo contenido disponible",
+                Mensaje = $"Se ha publicado nuevo contenido: \"{info.Titulo}\".",
+                Leida = false,
+                FechaCreacion = DateTime.UtcNow,
+                EnviadoPor = profesorId
+            }));
+            await context.SaveChangesAsync();
+        }
     }
 }
