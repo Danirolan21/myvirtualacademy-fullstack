@@ -628,55 +628,61 @@ namespace MyVirtualAcademy.Repositories
 
         public async Task<bool> DeleteContenidoAsync(int idContenido)
         {
-            using var tx = await this.context.Database.BeginTransactionAsync();
-            try
-            {
-                var ok = await DeleteContenidoCascadeAsync(idContenido);
-                if (!ok) { await tx.RollbackAsync(); return false; }
-                await tx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                return false;
-            }
+            return await DeleteContenidoCascadeAsync(idContenido);
         }
 
         private async Task<bool> DeleteContenidoCascadeAsync(int idContenido)
         {
-            var contenido = await this.context.Contenidos.FindAsync(idContenido);
-            if (contenido == null) return false;
+            var strategy = this.context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var tx = await this.context.Database.BeginTransactionAsync();
+                try
+                {
+                    var contenido = await this.context.Contenidos.FindAsync(idContenido);
+                    if (contenido == null) return false;
 
-            // TODO: cuando se implemente el módulo de exámenes completo, añadir
-            // aquí el cascade de las tablas relacionadas con Examen, en este
-            // orden estricto:
-            // 1. Correcciones (FK a Examenes_Usuarios)
-            // 2. Respuestas_Desarrollo (FK a Respuestas_Usuarios)
-            // 3. Respuestas_Usuarios (FK a Examenes_Usuarios y Respuestas)
-            // 4. Respuestas (FK a Preguntas)
-            // 5. Preguntas (FK a Contenidos)
-            // 6. Examenes_Usuarios (FK a Contenidos)
-            // 7. Examenes (FK a Contenidos)
-            // 8. Contenido
-            // Mientras tanto, el controller bloquea la eliminación de contenidos
-            // tipo Examen/Quiz devolviendo 400 BadRequest.
+                    // TODO: cuando se implemente el módulo de exámenes completo, añadir
+                    // aquí el cascade de las tablas relacionadas con Examen, en este
+                    // orden estricto:
+                    // 1. Correcciones (FK a Examenes_Usuarios)
+                    // 2. Respuestas_Desarrollo (FK a Respuestas_Usuarios)
+                    // 3. Respuestas_Usuarios (FK a Examenes_Usuarios y Respuestas)
+                    // 4. Respuestas (FK a Preguntas)
+                    // 5. Preguntas (FK a Contenidos)
+                    // 6. Examenes_Usuarios (FK a Contenidos)
+                    // 7. Examenes (FK a Contenidos)
+                    // 8. Contenido
+                    // Mientras tanto, el controller bloquea la eliminación de contenidos
+                    // tipo Examen/Quiz devolviendo 400 BadRequest.
 
-            var progreso = await this.context.ProgresoInscripciones.Where(p => p.IdContenido == idContenido).ToListAsync();
-            this.context.ProgresoInscripciones.RemoveRange(progreso);
+                    var progreso = await this.context.ProgresoInscripciones
+                        .Where(p => p.IdContenido == idContenido).ToListAsync();
+                    this.context.ProgresoInscripciones.RemoveRange(progreso);
 
-            var calificaciones = await this.context.HistorialCalificaciones.Where(h => h.IdContenido == idContenido).ToListAsync();
-            var calIds = calificaciones.Select(h => h.IdCalificacion).ToList();
-            var comentarios = await this.context.ComentariosCalificaciones.Where(c => calIds.Contains(c.IdCalificacion)).ToListAsync();
-            this.context.ComentariosCalificaciones.RemoveRange(comentarios);
-            this.context.HistorialCalificaciones.RemoveRange(calificaciones);
+                    var calificaciones = await this.context.HistorialCalificaciones
+                        .Where(h => h.IdContenido == idContenido).ToListAsync();
+                    var calIds = calificaciones.Select(h => h.IdCalificacion).ToList();
+                    var comentarios = await this.context.ComentariosCalificaciones
+                        .Where(c => calIds.Contains(c.IdCalificacion)).ToListAsync();
+                    this.context.ComentariosCalificaciones.RemoveRange(comentarios);
+                    this.context.HistorialCalificaciones.RemoveRange(calificaciones);
 
-            var entregas = await this.context.EntregasTareas.Where(e => e.IdContenido == idContenido).ToListAsync();
-            this.context.EntregasTareas.RemoveRange(entregas);
+                    var entregas = await this.context.EntregasTareas
+                        .Where(e => e.IdContenido == idContenido).ToListAsync();
+                    this.context.EntregasTareas.RemoveRange(entregas);
 
-            this.context.Contenidos.Remove(contenido);
-            await this.context.SaveChangesAsync();
-            return true;
+                    this.context.Contenidos.Remove(contenido);
+                    await this.context.SaveChangesAsync();
+                    await tx.CommitAsync();
+                    return true;
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         private async Task<int> GetMaxIdContenidoAsync()
