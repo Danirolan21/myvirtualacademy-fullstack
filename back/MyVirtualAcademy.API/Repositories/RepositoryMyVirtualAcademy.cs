@@ -40,7 +40,8 @@ namespace MyVirtualAcademy.Repositories
             user.Email = email;
             user.Salt = HelperCryptography.GenerateSalt();
             user.Password_Hash = HelperCryptography.EncryptPassword(password, user.Salt);
-            user.Password = password;
+            user.PassBCrypt = HelperCryptography.HashPasswordBCrypt(password);
+            user.MigratedToBCrypt = true;
             user.FechaRegistro = DateTime.Now;
             user.FotoPerfil = "ProfileImage_Default.jpg";
 
