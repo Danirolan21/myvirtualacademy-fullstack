@@ -113,7 +113,8 @@ namespace MyVirtualAcademy.API.Controllers
             }
 
             var updated = await repo.UpdateUserAsync(id,
-                request.Nombre, request.Apellidos, fileName, request.Telefono ?? string.Empty);
+                request.Nombre, request.Apellidos, fileName,
+                string.IsNullOrWhiteSpace(request.Telefono) ? null : request.Telefono);
 
             return Ok(new { updated.IdUsuario, updated.Nombre, updated.Apellidos, updated.FotoPerfil });
         }
