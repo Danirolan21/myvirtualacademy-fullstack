@@ -1127,14 +1127,24 @@ function isScheduleDateToday(fecha: string): boolean {
   .mv-cell { min-height: 54px; padding: 3px; }
   .mv-event-more { display: none; }
 
-  /* Show dots in month view on small mobile */
+  /* Show dots in month view on small mobile (override display:none from 768px) */
   .mv-events {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 2px;
   }
+  .mv-event-pill {
+    display: flex;
+    padding: 0;
+    background: none;
+  }
+  .mv-event-title { display: none; }
+  .mv-event-dot { width: 5px; height: 5px; }
 
   .months-grid { grid-template-columns: 1fr; }
+
+  /* Dropdown opens right from button edge when header wraps */
+  .view-menu { right: auto; left: 0; }
 
   .sv-date-label { padding: var(--sp-2) var(--sp-3); }
   .sv-events     { padding: var(--sp-2) var(--sp-3); }
