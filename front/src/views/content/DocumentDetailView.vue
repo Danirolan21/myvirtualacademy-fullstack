@@ -6,6 +6,7 @@ import { getContent, checkAccess, registerView, updateContent } from '../../api/
 import type { RecursoViewModel } from '../../types'
 import ContentDetailShell from '../../components/ContentDetailShell.vue'
 import FileUploader from '../../components/FileUploader.vue'
+import { contentFileUrl } from '../../utils/images'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -108,10 +109,10 @@ const fileIconColor = computed(() => {
     </div>
 
     <div class="download-actions">
-      <a :href="`/uploads/contents/${recurso?.urlContenido}`" download class="btn btn-primary">
+      <a :href="contentFileUrl(recurso?.urlContenido)" download class="btn btn-primary">
         <i class="fas fa-download"></i> Descargar documento
       </a>
-      <a :href="`/uploads/contents/${recurso?.urlContenido}`" target="_blank" rel="noopener" class="btn btn-outline-secondary">
+      <a :href="contentFileUrl(recurso?.urlContenido)" target="_blank" rel="noopener" class="btn btn-outline-secondary">
         <i class="fas fa-eye"></i> Ver documento
       </a>
     </div>

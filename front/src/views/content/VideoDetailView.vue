@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { getContent, checkAccess, registerView } from '../../api/content'
 import type { RecursoViewModel } from '../../types'
 import ContentDetailShell from '../../components/ContentDetailShell.vue'
+import { contentFileUrl } from '../../utils/images'
 
 const route = useRoute()
 const recurso = ref<RecursoViewModel | null>(null)
@@ -54,7 +55,7 @@ const embedUrl = computed(() => {
 
     <div class="video-wrap">
       <iframe v-if="isExternalVideo" :src="embedUrl" allowfullscreen></iframe>
-      <video v-else controls :src="`/uploads/contents/${recurso?.urlContenido}`"></video>
+      <video v-else controls :src="contentFileUrl(recurso?.urlContenido)"></video>
     </div>
   </ContentDetailShell>
 </template>

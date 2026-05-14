@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/auth'
 import { getTask, submitTask, gradeTask } from '../../api/tasks'
 import { updateContent, registerView } from '../../api/content'
 import { formatDateTime } from '../../utils/format'
+import { contentFileUrl } from '../../utils/images'
 import type { TareaViewModel, EntregaTareaVM } from '../../types'
 import CountdownTimer from '../../components/CountdownTimer.vue'
 import FileUploader from '../../components/FileUploader.vue'
@@ -217,7 +218,7 @@ function isLate(fechaEntregada: string) {
                   <div class="material-name">{{ tarea.urlContenido.split('/').pop() }}</div>
                   <div class="material-sub">Instrucciones de la tarea</div>
                 </div>
-                <a :href="`/uploads/contents/${tarea.urlContenido}`" download class="btn btn-sm btn-outline-secondary">
+                <a :href="contentFileUrl(tarea.urlContenido)" download class="btn btn-sm btn-outline-secondary">
                   <i class="fas fa-download"></i> Descargar
                 </a>
               </div>
@@ -264,7 +265,7 @@ function isLate(fechaEntregada: string) {
                   <div class="file-row">
                     <i class="fas fa-file file-icon"></i>
                     <span>{{ tarea.entrega.urlEntrega.split('/').pop() }}</span>
-                    <a :href="`/uploads/contents/${tarea.entrega.urlEntrega}`" download class="btn btn-sm btn-outline-secondary ms-auto">
+                    <a :href="contentFileUrl(tarea.entrega.urlEntrega)" download class="btn btn-sm btn-outline-secondary ms-auto">
                       <i class="fas fa-download"></i>
                     </a>
                   </div>
@@ -330,7 +331,7 @@ function isLate(fechaEntregada: string) {
                         </td>
                         <td>
                           <div class="action-btns">
-                            <a :href="`/uploads/contents/${e.urlEntrega}`" download class="btn btn-sm btn-outline-secondary">
+                            <a :href="contentFileUrl(e.urlEntrega)" download class="btn btn-sm btn-outline-secondary">
                               <i class="fas fa-download"></i>
                             </a>
                             <button class="btn btn-sm btn-success" @click="openGradeModal(e)">
@@ -365,7 +366,7 @@ function isLate(fechaEntregada: string) {
                       </span>
                     </div>
                     <div class="smc-actions">
-                      <a :href="`/uploads/contents/${e.urlEntrega}`" download class="btn btn-sm btn-outline-secondary">
+                      <a :href="contentFileUrl(e.urlEntrega)" download class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-download"></i> Archivo
                       </a>
                       <button class="btn btn-sm btn-success" @click="openGradeModal(e)">

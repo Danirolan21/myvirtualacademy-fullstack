@@ -9,3 +9,9 @@ export function courseCover(imagenPortada: string | null | undefined): string {
   if (!imagenPortada) return ''
   return `${API_BASE}/assets/images/courses/${imagenPortada}`
 }
+
+export function contentFileUrl(filename: string | null | undefined): string {
+  if (!filename) return ''
+  if (filename.startsWith('http')) return filename
+  return `${API_BASE}/uploads/contents/${filename}`
+}
