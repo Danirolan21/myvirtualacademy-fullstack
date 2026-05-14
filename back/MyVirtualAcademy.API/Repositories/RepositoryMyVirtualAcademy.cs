@@ -129,9 +129,9 @@ namespace MyVirtualAcademy.Repositories
             return await this.context.Roles.ToListAsync();
         }
 
-        public async Task<Usuario> 
+        public async Task<Usuario>
             UpdateUserAsync(int idUsuario, string nombre, string apellidos
-            , string? fotoPerfil, string telefono)
+            , string? fotoPerfil, string? telefono)
         {
             Usuario user = await this.FindUserAsync(idUsuario);
             user.Nombre = nombre;
@@ -364,29 +364,33 @@ namespace MyVirtualAcademy.Repositories
                 .FirstOrDefaultAsync(a => a.IdAsignatura == idAsignatura);
             if (asignatura == null) return false;
 
-            using var tx = await this.context.Database.BeginTransactionAsync();
-            try
+            var strategy = this.context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                foreach (var tema in asignatura.Temas.ToList())
-                    foreach (var c in tema.Contenidos.ToList())
-                        await DeleteContenidoCascadeAsync(c.IdContenido);
+                using var tx = await this.context.Database.BeginTransactionAsync();
+                try
+                {
+                    foreach (var tema in asignatura.Temas.ToList())
+                        foreach (var c in tema.Contenidos.ToList())
+                            await PrepareContenidoDeleteAsync(c.IdContenido);
 
-                this.context.Temas.RemoveRange(asignatura.Temas);
+                    this.context.Temas.RemoveRange(asignatura.Temas);
 
-                var relaciones = this.context.ProfesoresAsignaturas
-                    .Where(pa => pa.IdAsignatura == idAsignatura);
-                this.context.ProfesoresAsignaturas.RemoveRange(relaciones);
+                    var relaciones = await this.context.ProfesoresAsignaturas
+                        .Where(pa => pa.IdAsignatura == idAsignatura).ToListAsync();
+                    this.context.ProfesoresAsignaturas.RemoveRange(relaciones);
 
-                this.context.Asignaturas.Remove(asignatura);
-                await this.context.SaveChangesAsync();
-                await tx.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                return false;
-            }
+                    this.context.Asignaturas.Remove(asignatura);
+                    await this.context.SaveChangesAsync();
+                    await tx.CommitAsync();
+                    return true;
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<(bool added, bool conflict)> AddProfesorAsignaturaAsync(int idAsignatura, int idProfesor)
