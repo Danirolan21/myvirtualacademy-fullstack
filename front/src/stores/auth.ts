@@ -44,6 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data.user as AuthUser
   }
 
+  async function register(nombre: string, apellidos: string, email: string, password: string) {
+    await client.post('/api/auth/register', { nombre, apellidos, email, password })
+  }
+
   async function logout() {
     try {
       await client.post('/api/auth/logout', {})
@@ -54,6 +58,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     accessToken, user, isAuthenticated, isAdmin, role, isLoading,
-    login, logout, silentRefresh, setSession, clearSession
+    login, register, logout, silentRefresh, setSession, clearSession
   }
 })

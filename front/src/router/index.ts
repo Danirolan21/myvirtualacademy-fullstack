@@ -6,11 +6,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: () => import('../views/HomeView.vue') },
     { path: '/login', component: () => import('../views/auth/LoginView.vue') },
-    {
-      path: '/register',
-      component: () => import('../views/auth/RegisterView.vue'),
-      meta: { requiresAuth: true, requiresAdmin: true }
-    },
+    { path: '/register', component: () => import('../views/auth/RegisterView.vue') },
     { path: '/perfil', component: () => import('../views/user/PerfilView.vue'), meta: { requiresAuth: true } },
     { path: '/perfil/editar', redirect: '/perfil' },
     { path: '/admin', component: () => import('../views/admin/AdminView.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
@@ -33,12 +29,23 @@ const router = createRouter({
   ]
 })
 
+function destinationForRole(auth: ReturnType<typeof useAuthStore>): string {
+  if (auth.isAdmin) return '/admin'
+  if (['Profesor', 'Tutor', 'Administrador'].includes(auth.role)) return '/profesor'
+  return '/estudiante'
+}
+
 router.beforeEach(async to => {
   const auth = useAuthStore()
 
   // Intentar restaurar sesión si tenemos token en sessionStorage pero no el user hydratado
   if (auth.accessToken && !auth.user) {
     await auth.silentRefresh()
+  }
+
+  // Si ya está autenticado, /login y /register no tienen sentido — redirigir al dashboard
+  if (auth.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+    return destinationForRole(auth)
   }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
