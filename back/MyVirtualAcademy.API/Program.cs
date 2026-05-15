@@ -103,12 +103,27 @@ builder.Services.AddRateLimiter(options =>
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         limiterOptions.QueueLimit = 0;
     });
+    options.AddPolicy("register", httpContext =>
+    {
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromHours(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, _) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        await context.HttpContext.Response.WriteAsJsonAsync(
-            new { message = "Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo." });
+        var policyName = context.HttpContext.GetEndpoint()
+            ?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
+        var message = policyName == "register"
+            ? "Demasiados intentos de registro. Espera una hora e inténtalo de nuevo."
+            : "Demasiados intentos de inicio de sesión. Espera un minuto e inténtalo de nuevo.";
+        await context.HttpContext.Response.WriteAsJsonAsync(new { message });
     };
 });
 

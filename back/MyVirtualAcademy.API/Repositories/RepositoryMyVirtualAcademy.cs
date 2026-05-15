@@ -28,6 +28,7 @@ namespace MyVirtualAcademy.Repositories
             user.Password_Hash = HelperCryptography.EncryptPassword(password, user.Salt);
             user.PassBCrypt = HelperCryptography.HashPasswordBCrypt(password);
             user.MigratedToBCrypt = true;
+            user.Password = string.Empty;
             user.FechaRegistro = DateTime.Now;
             user.FotoPerfil = "ProfileImage_Default.jpg";
 
@@ -35,6 +36,13 @@ namespace MyVirtualAcademy.Repositories
             await this.context.SaveChangesAsync();
 
             await AsignarRolUsuarioAsync(user.IdUsuario, idRol);
+        }
+
+        public async Task<int?> GetRolIdByNombreAsync(string nombre)
+        {
+            var rol = await this.context.Roles
+                .FirstOrDefaultAsync(r => r.Nombre == nombre);
+            return rol?.IdRol;
         }
 
         public async Task<Usuario> LogInUserAsync(string email, string password)

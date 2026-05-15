@@ -31,7 +31,7 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         public record LoginRequest(string Email, string Password);
-        public record RegisterRequest(string Nombre, string Apellidos, string Email, string Password, int IdRol);
+        public record RegisterRequest(string Nombre, string Apellidos, string Email, string Password);
 
         [HttpPost("login")]
         [EnableRateLimiting("login")]
@@ -128,12 +128,51 @@ namespace MyVirtualAcademy.API.Controllers
         }
 
         [HttpPost("register")]
-        [Authorize(Policy = "AdminOnly")]
+        [EnableRateLimiting("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            await repo.Register(request.Nombre, request.Apellidos,
-                request.Email, request.Password, request.IdRol);
-            return Ok(new { message = "Usuario registrado correctamente" });
+            if (request is null)
+                return BadRequest(new { message = "Datos de registro no proporcionados" });
+
+            var nombre = request.Nombre?.Trim() ?? "";
+            var apellidos = request.Apellidos?.Trim() ?? "";
+            var email = request.Email?.Trim() ?? "";
+            var password = request.Password ?? "";
+
+            if (string.IsNullOrWhiteSpace(nombre))
+                return BadRequest(new { message = "El nombre es obligatorio" });
+            if (string.IsNullOrWhiteSpace(apellidos))
+                return BadRequest(new { message = "Los apellidos son obligatorios" });
+            if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                return BadRequest(new { message = "El email no es válido" });
+            if (password.Length < 6)
+                return BadRequest(new { message = "La contraseña debe tener al menos 6 caracteres" });
+
+            var existing = await repo.FindUserByEmailAsync(email);
+            if (existing is not null)
+                return Conflict(new { message = "Ya existe una cuenta con este email" });
+
+            var idRolEstudiante = await repo.GetRolIdByNombreAsync("Estudiante");
+            if (idRolEstudiante is null)
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Rol \"Estudiante\" no configurado en el sistema" });
+
+            await repo.Register(nombre, apellidos, email, password, idRolEstudiante.Value);
+            return StatusCode(StatusCodes.Status201Created,
+                new { message = "Cuenta creada correctamente" });
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         [HttpGet("roles")]
