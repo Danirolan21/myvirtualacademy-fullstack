@@ -17,24 +17,10 @@ namespace MyVirtualAcademy.Repositories
         }
 
         #region MANAGED METHODS
-        private async Task<int> GetMaxIdUserAsync()
-        {
-            if (this.context.Usuarios.Count() == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.Usuarios.MaxAsync
-                    (x => x.IdUsuario) + 1;
-            }
-        }
-
         public async Task Register(string nombre, string apellidos,
             string email, string password, int idRol)
         {
             Usuario user = new Usuario();
-            user.IdUsuario = await GetMaxIdUserAsync();
             user.Nombre = nombre;
             user.Apellidos = apellidos;
             user.Email = email;
@@ -307,33 +293,33 @@ namespace MyVirtualAcademy.Repositories
                 .ToListAsync();
         }
 
-        private async Task<int> GetMaxIdAsignaturaAsync()
-        {
-            if (!this.context.Asignaturas.Any()) return 1;
-            return await this.context.Asignaturas.MaxAsync(a => a.IdAsignatura) + 1;
-        }
-
         public async Task<Asignatura> CreateAsignaturaAsync(int idCurso, string nombre, int? idProfesor = null)
         {
-            var asignatura = new Asignatura
+            var strategy = this.context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                IdAsignatura = await GetMaxIdAsignaturaAsync(),
-                IdCurso = idCurso,
-                Nombre = nombre
-            };
-            this.context.Asignaturas.Add(asignatura);
-
-            if (idProfesor.HasValue)
-            {
-                this.context.ProfesoresAsignaturas.Add(new ProfesorAsignatura
+                using var tx = await this.context.Database.BeginTransactionAsync();
+                try
                 {
-                    IdAsignatura = asignatura.IdAsignatura,
-                    IdProfesor = idProfesor.Value
-                });
-            }
+                    var asignatura = new Asignatura { IdCurso = idCurso, Nombre = nombre };
+                    this.context.Asignaturas.Add(asignatura);
+                    await this.context.SaveChangesAsync();
 
-            await this.context.SaveChangesAsync();
-            return asignatura;
+                    if (idProfesor.HasValue)
+                    {
+                        this.context.ProfesoresAsignaturas.Add(new ProfesorAsignatura
+                        {
+                            IdAsignatura = asignatura.IdAsignatura,
+                            IdProfesor = idProfesor.Value
+                        });
+                        await this.context.SaveChangesAsync();
+                    }
+
+                    await tx.CommitAsync();
+                    return asignatura;
+                }
+                catch { await tx.RollbackAsync(); throw; }
+            });
         }
 
         public async Task<List<VistaUsuariosConRoles>> GetProfesoresYTutoresAsync()
@@ -527,7 +513,6 @@ namespace MyVirtualAcademy.Repositories
             , int idProfesor, DateTime fechaInicio, DateTime FechaFin, string Estado, string? imagenPortada)
         {
             Curso curso = new Curso();
-            curso.IdCurso = await this.GetMaxIdCourseAsync();
             curso.Nombre = nombre;
             curso.Descripcion = descripcion;
             curso.IdProfesor = idProfesor;
@@ -569,36 +554,9 @@ namespace MyVirtualAcademy.Repositories
         #endregion
 
         #region AREA PERSONAL PROFESOR
-        private async Task<int> GetMaxIdCourseAsync()
-        {
-            if (this.context.Cursos.Count() == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.Cursos.MaxAsync
-                    (x => x.IdCurso) + 1;
-            }
-        }
-
-        private async Task<int> GetMaxIdTemaAsync()
-        {
-            if (this.context.Temas.Count() == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.Temas.MaxAsync
-                    (x => x.IdTema) + 1;
-            }
-        }
-
         public async Task CreateTemaAsync(int idAsignatura, string nombre, int Orden)
         {
             Tema tema = new Tema();
-            tema.IdTema = await this.GetMaxIdTemaAsync();
             tema.IdAsignatura = idAsignatura;
             tema.Nombre = nombre;
             tema.Orden = Orden;
@@ -700,23 +658,10 @@ namespace MyVirtualAcademy.Repositories
             if (contenido != null) this.context.Contenidos.Remove(contenido);
         }
 
-        private async Task<int> GetMaxIdContenidoAsync()
-        {
-            if (this.context.Contenidos.Count() == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.Contenidos.MaxAsync(x => x.IdContenido) + 1;
-            }
-        }
-
         public async Task<Contenido> CreateContenidoAsync(int idTema, string titulo, string tipo, string urlContenido
             , string descripcion, int orden, DateTime? fechaEntrega = null, decimal? puntuacionMaxima = null)
         {
             Contenido contenido = new Contenido();
-            contenido.IdContenido = await this.GetMaxIdContenidoAsync();
             contenido.IdTema = idTema;
             contenido.Titulo = titulo;
             contenido.Tipo = tipo;
@@ -1106,13 +1051,8 @@ namespace MyVirtualAcademy.Repositories
         public async Task<int> GuardarCalificacionAsync(int idEntrega, int idEstudiante, int idContenido,
                 decimal calificacion, string comentarios, int idProfesor)
         {
-            // Obtener nuevo ID para la calificación
-            int idCalificacion = await GetMaxIdHistorialCalificacionesAsync();
-
-            // Crear y guardar la calificación
             var nuevaCalificacion = new HistorialCalificacion
             {
-                IdCalificacion = idCalificacion,
                 IdContenido = idContenido,
                 IdEstudiante = idEstudiante,
                 Calificacion = calificacion,
@@ -1123,15 +1063,11 @@ namespace MyVirtualAcademy.Repositories
             this.context.HistorialCalificaciones.Add(nuevaCalificacion);
             await this.context.SaveChangesAsync();
 
-            // Si hay comentarios, guardarlos
             if (!string.IsNullOrEmpty(comentarios))
             {
-                int idComentario = await GetMaxIdComentariosCalificacionesAsync();
-
                 var nuevoComentario = new ComentarioCalificacion
                 {
-                    IdComentario = idComentario,
-                    IdCalificacion = idCalificacion,
+                    IdCalificacion = nuevaCalificacion.IdCalificacion,
                     IdAutor = idProfesor,
                     Comentario = comentarios,
                     FechaComentario = DateTime.Now
@@ -1141,7 +1077,6 @@ namespace MyVirtualAcademy.Repositories
                 await this.context.SaveChangesAsync();
             }
 
-            // Actualizar el estado de la entrega
             var entrega = await this.context.EntregasTareas.FindAsync(idEntrega);
             if (entrega != null)
             {
@@ -1149,31 +1084,7 @@ namespace MyVirtualAcademy.Repositories
                 await this.context.SaveChangesAsync();
             }
 
-            return idCalificacion;
-        }
-
-        private async Task<int> GetMaxIdHistorialCalificacionesAsync()
-        {
-            if (!await this.context.HistorialCalificaciones.AnyAsync())
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.HistorialCalificaciones.MaxAsync(x => x.IdCalificacion) + 1;
-            }
-        }
-
-        private async Task<int> GetMaxIdComentariosCalificacionesAsync()
-        {
-            if (!await this.context.ComentariosCalificaciones.AnyAsync())
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.ComentariosCalificaciones.MaxAsync(x => x.IdComentario) + 1;
-            }
+            return nuevaCalificacion.IdCalificacion;
         }
 
         public async Task<bool> ActualizarTareaAsync(int contenidoId, TareaEditViewModel model, string urlContenido = null)
@@ -1202,19 +1113,6 @@ namespace MyVirtualAcademy.Repositories
             return true;
         }
 
-        private async Task<int> GetMaxIdEntregaTareasAsync()
-        {
-            if (this.context.EntregasTareas.Count() == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return await this.context.EntregasTareas.MaxAsync
-                    (x => x.IdEntrega) + 1;
-            }
-        }
-
         public async Task<bool> GuardarEntregaAsync(int contenidoId, int usuarioId, string comentario, IFormFile archivo)
         {
             try
@@ -1240,7 +1138,6 @@ namespace MyVirtualAcademy.Repositories
                 // Guardar información en la base de datos
                 var entrega = new EntregaTarea
                 {
-                    IdEntrega = await this.GetMaxIdEntregaTareasAsync(),
                     IdContenido = contenidoId,
                     IdEstudiante = usuarioId,
                     URLEntrega = fileName,
