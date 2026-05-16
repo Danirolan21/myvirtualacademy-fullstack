@@ -100,11 +100,13 @@ namespace MyVirtualAcademy.Repositories
 
         public async Task<string> GetUserRoleAsync(int idUsuario)
         {
-            var consulta = from v in this.context.VistaUsuariosConRoles
-                           where v.IdUsuario == idUsuario
-                           select v.Rol;
-
-            return await consulta.FirstOrDefaultAsync();
+            return await this.context.UsuariosRoles
+                .Where(ur => ur.IdUsuario == idUsuario)
+                .Join(this.context.Roles,
+                      ur => ur.IdRol,
+                      r => r.IdRol,
+                      (ur, r) => r.Nombre)
+                .FirstOrDefaultAsync();
         }
 
         public async Task AsignarRolUsuarioAsync(int idUsuario, int idRol)
