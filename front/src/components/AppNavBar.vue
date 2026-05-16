@@ -44,10 +44,30 @@ async function handleMarkAllRead() {
   unreadCount.value = 0
 }
 
-async function handleMarkRead(n: Notificacion) {
+const contentSubMap: Record<string, string> = {
+  Video: 'video', Documento: 'documento', Enlace: 'enlace',
+  Tarea: 'tarea', Examen: 'examen', Quiz: 'examen'
+}
+
+async function handleClickNotif(n: Notificacion) {
   if (!n.leida) {
     await markRead(n.idNotificacion)
     n.leida = true
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
+  }
+  bellOpen.value = false
+
+  if (n.tipo === 'inscripcion') {
+    router.push('/estudiante')
+    return
+  }
+  if (n.idReferencia == null) return  // huérfana o sin destino
+
+  if (n.tipo === 'entrega' || n.tipo === 'calificacion') {
+    router.push(`/contenido/${n.idReferencia}/tarea`)
+  } else if (n.tipo === 'contenido') {
+    const sub = contentSubMap[n.tipoContenido ?? ''] ?? 'documento'
+    router.push(`/contenido/${n.idReferencia}/${sub}`)
   }
 }
 
@@ -167,7 +187,7 @@ onUnmounted(() => {
                 :key="n.idNotificacion"
                 class="bell-item"
                 :class="{ 'bell-item--unread': !n.leida }"
-                @click="handleMarkRead(n)"
+                @click="handleClickNotif(n)"
               >
                 <div class="bell-item-icon" :class="`bell-icon--${n.tipo}`">
                   <i :class="notifIcon(n.tipo)"></i>

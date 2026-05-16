@@ -7,6 +7,8 @@ export interface Notificacion {
   mensaje: string
   leida: boolean
   fechaCreacion: string
+  idReferencia?: number | null
+  tipoContenido?: string | null
 }
 
 export const getNotifications = (page = 1) =>
