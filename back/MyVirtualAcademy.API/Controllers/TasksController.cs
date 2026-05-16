@@ -78,7 +78,7 @@ namespace MyVirtualAcademy.API.Controllers
 
             var tarea = await repo.ObtenerTareaDetalleAsync(id, request.IdEstudiante);
             var tituloContenido = tarea?.Titulo ?? "tarea";
-            try { await notifService.NotifyTaskGradedAsync(request.IdEstudiante, tituloContenido, request.Calificacion, profesorId); } catch { }
+            try { await notifService.NotifyTaskGradedAsync(id, request.IdEstudiante, tituloContenido, request.Calificacion, profesorId); } catch { }
 
             return Ok(new { message = "Calificación guardada correctamente" });
         }

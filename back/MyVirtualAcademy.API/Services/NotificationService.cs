@@ -30,14 +30,15 @@ namespace MyVirtualAcademy.API.Services
                 Mensaje = $"{nombreEstudiante} ha entregado la tarea \"{tituloContenido}\".",
                 Leida = false,
                 FechaCreacion = DateTime.UtcNow,
-                EnviadoPor = estudianteId
+                EnviadoPor = estudianteId,
+                IdReferencia = contenidoId
             });
 
             context.Notificaciones.AddRange(notifs);
             await context.SaveChangesAsync();
         }
 
-        public async Task NotifyTaskGradedAsync(int estudianteId, string tituloContenido, decimal calificacion, int profesorId)
+        public async Task NotifyTaskGradedAsync(int contenidoId, int estudianteId, string tituloContenido, decimal calificacion, int profesorId)
         {
             context.Notificaciones.Add(new Notificacion
             {
@@ -47,7 +48,8 @@ namespace MyVirtualAcademy.API.Services
                 Mensaje = $"Tu entrega de \"{tituloContenido}\" ha sido calificada con {calificacion:F1}.",
                 Leida = false,
                 FechaCreacion = DateTime.UtcNow,
-                EnviadoPor = profesorId
+                EnviadoPor = profesorId,
+                IdReferencia = contenidoId
             });
             await context.SaveChangesAsync();
         }
@@ -95,7 +97,8 @@ namespace MyVirtualAcademy.API.Services
                 Mensaje = $"Se ha publicado nuevo contenido: \"{info.Titulo}\".",
                 Leida = false,
                 FechaCreacion = DateTime.UtcNow,
-                EnviadoPor = profesorId
+                EnviadoPor = profesorId,
+                IdReferencia = contenidoId
             }));
             await context.SaveChangesAsync();
         }

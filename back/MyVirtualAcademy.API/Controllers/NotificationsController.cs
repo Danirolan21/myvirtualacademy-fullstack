@@ -38,7 +38,14 @@ namespace MyVirtualAcademy.API.Controllers
                     n.Titulo,
                     n.Mensaje,
                     n.Leida,
-                    n.FechaCreacion
+                    n.FechaCreacion,
+                    n.IdReferencia,
+                    TipoContenido = n.Tipo == "contenido" && n.IdReferencia != null
+                        ? context.Contenidos
+                            .Where(c => c.IdContenido == n.IdReferencia)
+                            .Select(c => (string?)c.Tipo)
+                            .FirstOrDefault()
+                        : null
                 })
                 .ToListAsync();
 

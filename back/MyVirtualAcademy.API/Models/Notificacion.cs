@@ -31,6 +31,9 @@ namespace MyVirtualAcademy.Models
         [Column("Enviado_Por")]
         public int? EnviadoPor { get; set; }
 
+        [Column("ID_Referencia")]
+        public int? IdReferencia { get; set; }
+
         [ForeignKey("IdUsuario")]
         public Usuario Usuario { get; set; } = null!;
     }
