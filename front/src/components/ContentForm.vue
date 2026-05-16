@@ -4,7 +4,10 @@ import { createContent } from '../api/content'
 import FileUploader from './FileUploader.vue'
 
 const props = defineProps<{ idTema: number; idAsignatura: number; nextOrden?: number }>()
-const emit = defineEmits<{ (e: 'saved'): void; (e: 'cancel'): void }>()
+const emit = defineEmits<{
+  (e: 'saved', payload: { idContenido: number; tipo: string }): void
+  (e: 'cancel'): void
+}>()
 
 const form = ref({
   titulo: '',
@@ -37,8 +40,8 @@ async function submit() {
       fd.append('puntuacionMaxima', String(form.value.puntuacionMaxima))
     }
     if (file.value) fd.append('archivoContenido', file.value)
-    await createContent(fd)
-    emit('saved')
+    const res = await createContent(fd)
+    emit('saved', { idContenido: res.data.idContenido, tipo: form.value.tipo })
   } finally {
     submitting.value = false
   }

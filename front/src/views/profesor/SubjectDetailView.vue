@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getSubject, updateSubject, addProfesorToSubject, removeProfesorFromSubject } from '../../api/subjects'
 import { userAvatar } from '../../utils/images'
@@ -12,6 +12,7 @@ import type { AsignaturaDetalle, TemaVM, ContenidoVM } from '../../types'
 import ContentForm from '../../components/ContentForm.vue'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const asignatura = ref<AsignaturaDetalle | null>(null)
 const loading = ref(true)
@@ -230,6 +231,11 @@ async function saveTopic() {
     savingTopic.value = false
   }
 }
+
+function onContentCreated(payload: { idContenido: number; tipo: string }) {
+  addingContentFor.value = null
+  router.push(contentRoute(payload.idContenido, payload.tipo))
+}
 </script>
 
 <template>
@@ -432,7 +438,7 @@ async function saveTopic() {
                 :id-tema="selectedContent.tema.idTema!"
                 :id-asignatura="asignatura.idAsignatura"
                 :next-orden="(selectedContent.tema.contenidos?.length ?? 0) + 1"
-                @saved="() => { addingContentFor = null; load() }"
+                @saved="onContentCreated"
                 @cancel="addingContentFor = null"
               />
             </div>
@@ -468,7 +474,7 @@ async function saveTopic() {
                 :id-tema="selectedTema.idTema!"
                 :id-asignatura="asignatura.idAsignatura"
                 :next-orden="(selectedTema.contenidos?.length ?? 0) + 1"
-                @saved="() => { addingContentFor = null; load() }"
+                @saved="onContentCreated"
                 @cancel="addingContentFor = null"
               />
             </div>

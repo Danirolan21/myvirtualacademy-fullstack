@@ -5,7 +5,7 @@ export const getContent = (id: number) =>
   client.get<RecursoViewModel>(`/api/content/${id}`)
 
 export const createContent = (data: FormData) =>
-  client.post('/api/content', data)
+  client.post<{ idContenido: number; idAsignatura: number; message: string }>('/api/content', data)
 
 export const updateContent = (id: number, data: FormData) =>
   client.put(`/api/content/${id}`, data)
