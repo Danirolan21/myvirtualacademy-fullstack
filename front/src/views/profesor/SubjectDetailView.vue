@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getSubject, updateSubject, addProfesorToSubject, removeProfesorFromSubject } from '../../api/subjects'
@@ -113,9 +113,10 @@ async function load() {
     const res = await getSubject(Number(route.params.id))
     const detalle = (res.data as any).detalle ?? res.data
     asignatura.value = detalle
-    // Abrir el primer tema por defecto
+    // Abrir el primer tema por defecto en la carga inicial
+    // (no machacar si ya hay uno abierto — ej. tras crear un tema nuevo)
     if (detalle?.temas?.length) {
-      openTemaId.value = detalle.temas[0].idTema!
+      openTemaId.value ??= detalle.temas[0].idTema!
     }
   } finally {
     loading.value = false
@@ -212,10 +213,19 @@ async function saveTopic() {
   if (!asignatura.value) return
   savingTopic.value = true
   try {
-    await createTopic({ ...newTopic.value, idAsignatura: asignatura.value.idAsignatura })
+    const res = await createTopic({ ...newTopic.value, idAsignatura: asignatura.value.idAsignatura })
     showTopicModal.value = false
     newTopic.value = { nombre: '', orden: 1 }
     await load()
+
+    const idTema = res.data.idTema
+    openTemaId.value = idTema
+    selectedTemaId.value = idTema
+    selectedContent.value = null
+
+    await nextTick()
+    document.querySelector(`[data-tema-id="${idTema}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   } finally {
     savingTopic.value = false
   }
@@ -308,7 +318,7 @@ async function saveTopic() {
         </div>
 
         <nav class="sidebar-nav">
-          <div v-for="tema in asignatura.temas" :key="tema.idTema" class="tema-group">
+          <div v-for="tema in asignatura.temas" :key="tema.idTema" :data-tema-id="tema.idTema" class="tema-group">
             <!-- Tema header — acordeón exclusivo -->
             <div class="tema-toggle-wrap">
               <button

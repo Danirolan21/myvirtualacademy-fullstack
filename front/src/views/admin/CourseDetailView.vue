@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { getCourse, getEnrollments } from '../../api/courses'
 import { createSubject, deleteSubject } from '../../api/subjects'
@@ -10,6 +10,7 @@ import { formatDate } from '../../utils/format'
 import type { CourseDetailResponse, Inscripcion } from '../../types'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const curso = ref<CourseDetailResponse | null>(null)
 const loading = ref(true)
@@ -40,13 +41,7 @@ async function submitNewSubject() {
   try {
     const idProfesor = newSubjectProfesor.value !== '' ? Number(newSubjectProfesor.value) : undefined
     const res = await createSubject(Number(route.params.id), newSubjectName.value.trim(), idProfesor)
-    curso.value!.asignaturas = [
-      ...(curso.value!.asignaturas ?? []),
-      { idAsignatura: res.data.idAsignatura, nombre: res.data.nombre }
-    ]
-    newSubjectName.value = ''
-    newSubjectProfesor.value = ''
-    showNewSubjectForm.value = false
+    router.push(`/asignatura/${res.data.idAsignatura}`)
   } catch (e: any) {
     subjectError.value = e?.response?.data?.message ?? 'Error al crear la asignatura.'
   } finally {
