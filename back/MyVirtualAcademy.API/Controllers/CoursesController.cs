@@ -91,11 +91,12 @@ namespace MyVirtualAcademy.API.Controllers
                 await request.ImagenPortada.CopyToAsync(stream);
             }
 
-            await repo.CreateCourseAsync(
+            var curso = await repo.CreateCourseAsync(
                 request.Nombre, request.Descripcion, request.IdProfesor,
                 request.FechaInicio, request.FechaFin, request.Estado, fileName);
 
-            return Ok(new { message = "Curso creado correctamente" });
+            return StatusCode(StatusCodes.Status201Created,
+                new { idCurso = curso.IdCurso, message = "Curso creado correctamente" });
         }
 
         [HttpPut("{id:int}")]

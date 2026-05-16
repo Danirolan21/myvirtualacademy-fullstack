@@ -27,11 +27,12 @@ namespace MyVirtualAcademy.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateExamRequest request)
         {
-            await repo.CreateExamenAsync(
+            var examen = await repo.CreateExamenAsync(
                 request.IdContenido, request.DuracionMinutos,
                 request.FechaPublicacionNotas, request.IntentosMaximos,
                 request.PenalizacionIncorrecta);
-            return Ok(new { message = "Examen creado correctamente" });
+            return StatusCode(StatusCodes.Status201Created,
+                new { idContenido = examen.IdContenido, message = "Examen creado correctamente" });
         }
     }
 }

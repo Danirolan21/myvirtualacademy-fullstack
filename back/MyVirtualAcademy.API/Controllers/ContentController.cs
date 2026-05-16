@@ -100,7 +100,12 @@ namespace MyVirtualAcademy.API.Controllers
 
             var profesorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             try { await notifService.NotifyNewContentAsync(contenido.IdContenido, profesorId); } catch { }
-            return Ok(new { contenido.IdContenido, idAsignatura = contenido.Tema.IdAsignatura });
+            return StatusCode(StatusCodes.Status201Created, new
+            {
+                idContenido = contenido.IdContenido,
+                idAsignatura = contenido.Tema.IdAsignatura,
+                message = "Contenido creado correctamente"
+            });
         }
 
         [HttpPut("{id:int}")]

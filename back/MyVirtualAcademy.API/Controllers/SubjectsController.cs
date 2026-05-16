@@ -52,7 +52,13 @@ namespace MyVirtualAcademy.API.Controllers
                 request.NombreAsignatura.Trim(),
                 request.IdProfesor);
 
-            return Ok(new { asignatura.IdAsignatura, asignatura.Nombre, asignatura.IdCurso });
+            return StatusCode(StatusCodes.Status201Created, new
+            {
+                asignatura.IdAsignatura,
+                asignatura.Nombre,
+                asignatura.IdCurso,
+                message = "Asignatura creada correctamente"
+            });
         }
 
         [HttpPut("{id:int}")]

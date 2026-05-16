@@ -21,8 +21,9 @@ namespace MyVirtualAcademy.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTopicRequest request)
         {
-            await repo.CreateTemaAsync(request.IdAsignatura, request.Nombre, request.Orden);
-            return Ok(new { message = "Tema creado correctamente" });
+            var tema = await repo.CreateTemaAsync(request.IdAsignatura, request.Nombre, request.Orden);
+            return StatusCode(StatusCodes.Status201Created,
+                new { idTema = tema.IdTema, message = "Tema creado correctamente" });
         }
 
         [HttpDelete("{id:int}")]

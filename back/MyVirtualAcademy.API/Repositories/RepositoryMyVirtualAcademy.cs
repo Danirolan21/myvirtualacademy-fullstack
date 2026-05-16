@@ -517,7 +517,7 @@ namespace MyVirtualAcademy.Repositories
             };
         }
 
-        public async Task CreateCourseAsync(string nombre, string? descripcion
+        public async Task<Curso> CreateCourseAsync(string nombre, string? descripcion
             , int idProfesor, DateTime fechaInicio, DateTime FechaFin, string Estado, string? imagenPortada)
         {
             Curso curso = new Curso();
@@ -530,6 +530,7 @@ namespace MyVirtualAcademy.Repositories
             curso.ImagenPortada = imagenPortada;
             await this.context.Cursos.AddAsync(curso);
             await this.context.SaveChangesAsync();
+            return curso;
         }
 
         public async Task<bool> UpdateCourseAsync(int idCurso, string nombre, string? descripcion,
@@ -562,7 +563,7 @@ namespace MyVirtualAcademy.Repositories
         #endregion
 
         #region AREA PERSONAL PROFESOR
-        public async Task CreateTemaAsync(int idAsignatura, string nombre, int Orden)
+        public async Task<Tema> CreateTemaAsync(int idAsignatura, string nombre, int Orden)
         {
             Tema tema = new Tema();
             tema.IdAsignatura = idAsignatura;
@@ -570,6 +571,7 @@ namespace MyVirtualAcademy.Repositories
             tema.Orden = Orden;
             await this.context.Temas.AddAsync(tema);
             await this.context.SaveChangesAsync();
+            return tema;
         }
 
         public async Task<bool> DeleteTemaAsync(int idTema)
@@ -689,7 +691,7 @@ namespace MyVirtualAcademy.Repositories
             return await this.ObtenerContenidoPorIdAsync(contenido.IdContenido);
         }
 
-        public async Task CreateExamenAsync(int idContenido, int duracionMinutos, DateTime fechaPublicacionNotas
+        public async Task<Examen> CreateExamenAsync(int idContenido, int duracionMinutos, DateTime fechaPublicacionNotas
             , int numeroIntentos, decimal PenalizacionIncorrecta)
         {
             Examen examen = new Examen
@@ -703,6 +705,7 @@ namespace MyVirtualAcademy.Repositories
 
             await this.context.Examenes.AddAsync(examen);
             await this.context.SaveChangesAsync();
+            return examen;
         }
 
         public async Task<Curso> GetCursoPorAsignaturaAsync(int idAsignatura)
