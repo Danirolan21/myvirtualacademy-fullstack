@@ -20,22 +20,44 @@ namespace MyVirtualAcademy.Repositories
         public async Task Register(string nombre, string apellidos,
             string email, string password, int idRol)
         {
-            Usuario user = new Usuario();
-            user.Nombre = nombre;
-            user.Apellidos = apellidos;
-            user.Email = email;
-            user.Salt = HelperCryptography.GenerateSalt();
-            user.Password_Hash = HelperCryptography.EncryptPassword(password, user.Salt);
-            user.PassBCrypt = HelperCryptography.HashPasswordBCrypt(password);
-            user.MigratedToBCrypt = true;
-            user.Password = string.Empty;
-            user.FechaRegistro = DateTime.Now;
-            user.FotoPerfil = "ProfileImage_Default.jpg";
+            var strategy = this.context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var tx = await this.context.Database.BeginTransactionAsync();
+                try
+                {
+                    var salt = HelperCryptography.GenerateSalt();
+                    var user = new Usuario
+                    {
+                        Nombre = nombre,
+                        Apellidos = apellidos,
+                        Email = email,
+                        Salt = salt,
+                        Password_Hash = HelperCryptography.EncryptPassword(password, salt),
+                        PassBCrypt = HelperCryptography.HashPasswordBCrypt(password),
+                        MigratedToBCrypt = true,
+                        Password = string.Empty,
+                        FechaRegistro = DateTime.Now,
+                        FotoPerfil = "ProfileImage_Default.jpg"
+                    };
+                    this.context.Usuarios.Add(user);
+                    await this.context.SaveChangesAsync();
 
-            this.context.Usuarios.Add(user);
-            await this.context.SaveChangesAsync();
+                    this.context.UsuariosRoles.Add(new UsuarioRol
+                    {
+                        IdUsuario = user.IdUsuario,
+                        IdRol = idRol
+                    });
+                    await this.context.SaveChangesAsync();
 
-            await AsignarRolUsuarioAsync(user.IdUsuario, idRol);
+                    await tx.CommitAsync();
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<int?> GetRolIdByNombreAsync(string nombre)

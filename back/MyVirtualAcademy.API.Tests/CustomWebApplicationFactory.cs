@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -52,7 +54,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<MyVirtualAcademyContext>(options =>
                 options.UseInMemoryDatabase(_dbName)
-                       .UseInternalServiceProvider(inMemoryProvider));
+                       .UseInternalServiceProvider(inMemoryProvider)
+                       // InMemory no soporta transacciones; el código de producción usa
+                       // BeginTransactionAsync (ej. Register, CreateAsignaturaAsync).
+                       // Silenciamos el warning para que en tests las operaciones se ejecuten
+                       // sin transacción real (la garantía de atomicidad la da SQL Server en prod).
+                       .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         });
     }
 
