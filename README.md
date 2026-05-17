@@ -21,20 +21,16 @@
 
 ---
 
-## Capturas
-
-> _Pendiente de añadir capturas o GIFs de las vistas principales._
-
----
-
 ## Stack tecnológico
 
 | Capa | Tecnología |
 |------|------------|
 | Frontend | Vue 3 + Vite + TypeScript, Pinia, Vue Router 4, Axios |
 | Backend | ASP.NET Core 9 Web API, Entity Framework Core 9 |
-| Base de datos | Azure SQL Database (esquema manual, sin migraciones EF) |
+| Base de datos | Azure SQL Database (esquema y scripts SQL versionados manualmente) |
 | Autenticación | JWT en memoria + refresh token en cookie httpOnly, BCrypt 12 rounds |
+| Tests | xUnit + Microsoft.AspNetCore.Mvc.Testing + EF Core InMemory + FluentAssertions 6.12 |
+| CI | GitHub Actions (build + test backend, build frontend en cada push/PR) |
 | Hosting frontend | Vercel |
 | Hosting backend | MonsterASP.NET (.NET 9 nativo) |
 
@@ -61,8 +57,11 @@
 
 ### Todos los roles
 - Perfil unificado: edición inline de nombre, apellidos, teléfono y avatar; cambio de contraseña
-- Notificaciones: campanita con badge de no leídas y polling automático cada 60 s
+- Notificaciones: campanita con badge de no leídas, polling cada 60 s; cada notificación navega al recurso relacionado (contenido, tarea, inscripción) al hacer click
 - Calendario mensual con eventos filtrados por curso y tipo de contenido
+
+### Sin autenticación
+- Registro público de cuenta autoservicio en `/register` con auto-login tras crear la cuenta (rol Estudiante por defecto, rate-limited a 5 registros/hora por IP)
 
 ---
 
@@ -83,14 +82,17 @@
 ```
 myvirtualacademy-fullstack/
 ├── back/
+│   ├── MyVirtualAcademy.sln        Solución con API + Tests
 │   ├── MyVirtualAcademy.API/
-│   │   ├── Controllers/     Un controller por recurso (Auth, Courses, Subjects, Tasks…)
-│   │   ├── Models/          Entidades EF Core y ViewModels
-│   │   ├── Repositories/    Toda la lógica de datos en un único repositorio
-│   │   ├── Services/        JwtTokenService, NotificationService
-│   │   └── Helper/          HelperPathProvider, HelperCryptography
-│   ├── migrations/          Scripts SQL incrementales numerados
-│   └── script.sql           DDL completo del esquema (referencia)
+│   │   ├── Controllers/        Un controller por recurso (Auth, Courses, Subjects, Tasks…)
+│   │   ├── Models/             Entidades EF Core y ViewModels
+│   │   ├── Repositories/       IUserRepository, IContentRepository + implementación concreta
+│   │   ├── Services/           JwtTokenService, NotificationService
+│   │   └── Helper/             HelperPathProvider, HelperCryptography
+│   ├── MyVirtualAcademy.API.Tests/ Proyecto xUnit con tests de integración
+│   │                           (WebApplicationFactory + EF Core InMemory)
+│   ├── migrations/             Scripts SQL incrementales numerados (001..006)
+│   └── script.sql              DDL completo del esquema (referencia)
 │
 └── front/
     └── src/
@@ -100,7 +102,7 @@ myvirtualacademy-fullstack/
         ├── stores/          Pinia — auth store con silent refresh automático
         ├── types/           Interfaces TypeScript (Usuario, Curso, Asignatura…)
         ├── utils/           format.ts, images.ts (URLs absolutas al backend)
-        └── views/           Vistas organizadas por rol: admin/, profesor/, student/, content/
+        └── views/           Vistas organizadas: auth/, admin/, profesor/, student/, content/, user/ + HomeView/CalendarView/NotFoundView
 ```
 
 ---
@@ -123,9 +125,11 @@ sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/001_add_bc
 sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/002_add_notifications.sql
 sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/003_replace_notifications_table.sql
 sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/004_ensure_isadmin_column.sql
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/005_identity_migration_explicit.sql
+sqlcmd -S LOCALHOST\SQLEXPRESS -d MyVirtualAcademy -i back/migrations/006_add_id_referencia_notificaciones.sql
 ```
 
-La migración `001` es obligatoria antes del primer arranque: añade las columnas BCrypt, IsAdmin y la tabla RefreshTokens.
+Las migraciones 001–006 son obligatorias antes del primer arranque: 001 añade BCrypt/IsAdmin/RefreshTokens, 005 convierte las 8 tablas principales a IDENTITY (table-swap preservando IDs), 006 añade `ID_Referencia` a Notificaciones.
 
 ### 2. Backend
 
@@ -144,9 +148,9 @@ Crea el archivo `back/MyVirtualAcademy.API/appsettings.Development.json` con tus
 ```
 
 ```bash
-cd back/MyVirtualAcademy.API
-dotnet restore
-dotnet run
+cd back
+dotnet restore MyVirtualAcademy.sln
+dotnet run --project MyVirtualAcademy.API
 ```
 
 API disponible en `http://localhost:5100`. Swagger en `http://localhost:5100/swagger`.
@@ -161,6 +165,15 @@ npm run dev
 ```
 
 App disponible en `http://localhost:5173`. El proxy de Vite redirige `/api/*` al backend en desarrollo, sin necesidad de configurar CORS.
+
+### 4. Ejecutar los tests
+
+```bash
+cd back
+dotnet test
+```
+
+Los tests usan EF Core InMemory + secret JWT hardcodeado en la `CustomWebApplicationFactory` — son autocontenidos, no requieren BD ni configuración local.
 
 ---
 
@@ -205,7 +218,7 @@ graph TD
 
     subgraph Backend["Backend (MonsterASP.NET)"]
         API["ASP.NET Core 9<br/>Web API"]
-        Repo["RepositoryMyVirtualAcademy<br/>(acceso a datos)"]
+        Repo["IUserRepository<br/>IContentRepository<br/>(acceso a datos)"]
         JWT["JwtTokenService"]
     end
 
@@ -235,6 +248,7 @@ Funcionalidad principal completa para los tres roles. El proyecto se desarrolló
 - Módulo de exámenes pendiente (stub en frontend y backend)
 - Sin paginación en listados largos
 - Sin búsqueda o filtrado de contenidos dentro de una asignatura
+- Cobertura de tests inicial (5 tests de integración sobre auth y content); resto de endpoints (cursos, asignaturas, temas, tareas, calificaciones, notificaciones) sin cobertura aún
 - Los archivos subidos por usuarios (avatares, entregas, portadas de curso) se almacenan en disco local del servidor. En MonsterASP.NET el almacenamiento es persistente, pero migrar a un entorno containerizado o serverless requeriría almacenamiento externo (S3, Azure Blob, etc.)
 
 ---
