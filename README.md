@@ -2,6 +2,7 @@
 
 **LMS full stack construido desde cero como TFM del Máster en Desarrollo Full Stack + Multicloud.**
 
+[![CI](https://github.com/Danirolan21/myvirtualacademy-fullstack/actions/workflows/ci.yml/badge.svg)](https://github.com/Danirolan21/myvirtualacademy-fullstack/actions/workflows/ci.yml)
 ![Vue](https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-9.0-512BD4?logo=dotnet&logoColor=white)
