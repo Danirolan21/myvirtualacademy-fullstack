@@ -62,7 +62,13 @@ builder.Services.AddDbContext<MyVirtualAcademyContext>(options =>
 // Servicios propios
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<HelperPathProvider>();
-builder.Services.AddTransient<RepositoryMyVirtualAcademy>();
+// Repositorio Scoped (coherente con el DbContext Scoped que envuelve):
+// una request HTTP = una instancia de repo = un DbContext.
+// Las dos interfaces parciales (IUserRepository, IContentRepository) se resuelven
+// al MISMO objeto repo dentro del scope, vía factories.
+builder.Services.AddScoped<RepositoryMyVirtualAcademy>();
+builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<RepositoryMyVirtualAcademy>());
+builder.Services.AddScoped<IContentRepository>(sp => sp.GetRequiredService<RepositoryMyVirtualAcademy>());
 builder.Services.AddTransient<JwtTokenService>();
 builder.Services.AddTransient<NotificationService>();
 

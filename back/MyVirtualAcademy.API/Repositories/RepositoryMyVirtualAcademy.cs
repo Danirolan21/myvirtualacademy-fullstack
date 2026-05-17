@@ -5,7 +5,7 @@ using MyVirtualAcademy.Models;
 
 namespace MyVirtualAcademy.Repositories
 {
-    public class RepositoryMyVirtualAcademy
+    public class RepositoryMyVirtualAcademy : IUserRepository, IContentRepository
     {
         private MyVirtualAcademyContext context;
         private HelperPathProvider helperPath;
