@@ -67,35 +67,6 @@ namespace MyVirtualAcademy.Repositories
             return rol?.IdRol;
         }
 
-        public async Task<Usuario> LogInUserAsync(string email, string password)
-        {
-            var consulta = from datos in this.context.Usuarios
-                           where datos.Email == email
-                           select datos;
-            Usuario user = await consulta.FirstOrDefaultAsync();
-            if (user == null)
-            {
-                return null;
-            }
-            else
-            {
-                string salt = user.Salt;
-                byte[] temp =
-                    HelperCryptography.EncryptPassword(password, salt);
-                byte[] passBytes = user.Password_Hash;
-                bool response =
-                    HelperCryptography.CompararArrays(temp, passBytes);
-                if (response == true)
-                {
-                    return user;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
         public async Task<Usuario?> FindUserByEmailAsync(string email)
         {
             return await this.context.Usuarios
