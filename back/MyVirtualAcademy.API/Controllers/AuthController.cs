@@ -13,13 +13,13 @@ namespace MyVirtualAcademy.API.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IUserRepository repo;
         private readonly JwtTokenService tokenService;
         private readonly IConfiguration config;
         private readonly IWebHostEnvironment env;
 
         public AuthController(
-            RepositoryMyVirtualAcademy repo,
+            IUserRepository repo,
             JwtTokenService tokenService,
             IConfiguration config,
             IWebHostEnvironment env)

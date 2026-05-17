@@ -11,10 +11,10 @@ namespace MyVirtualAcademy.API.Controllers
     [Authorize]
     public class TasksController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IContentRepository repo;
         private readonly NotificationService notifService;
 
-        public TasksController(RepositoryMyVirtualAcademy repo, NotificationService notifService)
+        public TasksController(IContentRepository repo, NotificationService notifService)
         {
             this.repo = repo;
             this.notifService = notifService;

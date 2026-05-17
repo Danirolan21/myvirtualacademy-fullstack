@@ -10,9 +10,9 @@ namespace MyVirtualAcademy.API.Controllers
     [Authorize]
     public class ProgressController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IContentRepository repo;
 
-        public ProgressController(RepositoryMyVirtualAcademy repo)
+        public ProgressController(IContentRepository repo)
         {
             this.repo = repo;
         }

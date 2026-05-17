@@ -9,9 +9,9 @@ namespace MyVirtualAcademy.API.Controllers
     [Authorize(Policy = "ProfesorUTutor")]
     public class TopicsController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IContentRepository repo;
 
-        public TopicsController(RepositoryMyVirtualAcademy repo)
+        public TopicsController(IContentRepository repo)
         {
             this.repo = repo;
         }

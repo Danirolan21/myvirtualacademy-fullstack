@@ -13,11 +13,11 @@ namespace MyVirtualAcademy.API.Controllers
     [Authorize]
     public class ContentController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IContentRepository repo;
         private readonly HelperPathProvider helperPath;
         private readonly NotificationService notifService;
 
-        public ContentController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath, NotificationService notifService)
+        public ContentController(IContentRepository repo, HelperPathProvider helperPath, NotificationService notifService)
         {
             this.repo = repo;
             this.helperPath = helperPath;

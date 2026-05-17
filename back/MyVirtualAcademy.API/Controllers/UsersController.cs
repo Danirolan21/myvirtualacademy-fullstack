@@ -11,10 +11,10 @@ namespace MyVirtualAcademy.API.Controllers
     [Authorize]
     public class UsersController : ControllerBase
     {
-        private readonly RepositoryMyVirtualAcademy repo;
+        private readonly IUserRepository repo;
         private readonly HelperPathProvider helperPath;
 
-        public UsersController(RepositoryMyVirtualAcademy repo, HelperPathProvider helperPath)
+        public UsersController(IUserRepository repo, HelperPathProvider helperPath)
         {
             this.repo = repo;
             this.helperPath = helperPath;
