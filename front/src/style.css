@@ -6,6 +6,13 @@
 
 html, body {
   height: 100%;
+  /* Contener cualquier overflow horizontal de hijos para que la página no
+     gane scroll lateral cuando algo desborda (tabs en móvil, emails largos…).
+     `clip` es la propiedad moderna que NO crea contexto de scroll —preferible
+     para navbar sticky y contenido fijo—; `hidden` queda como fallback en
+     navegadores que aún no soporten clip. */
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 html {
@@ -13,7 +20,10 @@ html {
 }
 
 #app {
-  min-height: 100%;
+  /* 100vh (en lugar de 100%) garantiza que el flex container tiene altura
+     definida y que `flex: 1` en el main empuja el footer al borde inferior
+     incluso cuando la página tiene poco contenido. */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }

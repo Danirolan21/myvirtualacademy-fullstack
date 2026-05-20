@@ -115,6 +115,18 @@ function coverGradient(idAsignatura: number): string {
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--sp-6);
 }
+
+@media (max-width: 768px) {
+  .tabs-bar {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to right, black 88%, transparent);
+            mask-image: linear-gradient(to right, black 88%, transparent);
+  }
+  .tabs-bar::-webkit-scrollbar { display: none; }
+}
+
 .tab-btn {
   padding: var(--sp-3) var(--sp-5);
   background: none;
@@ -126,6 +138,8 @@ function coverGradient(idAsignatura: number): string {
   font-weight: var(--font-weight-medium);
   color: var(--color-muted);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab-btn.active {
   color: var(--color-text);

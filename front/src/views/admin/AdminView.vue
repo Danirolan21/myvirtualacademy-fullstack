@@ -581,6 +581,19 @@ watch(activeTab, async tab => {
   margin-bottom: -2px;
 }
 
+/* En móvil, si las tabs no caben, scroll horizontal interno con fade derecho
+   en lugar de propagar el overflow a toda la página. */
+@media (max-width: 768px) {
+  .page-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to right, black 88%, transparent);
+            mask-image: linear-gradient(to right, black 88%, transparent);
+  }
+  .page-tabs::-webkit-scrollbar { display: none; }
+}
+
 .page-tab {
   display: inline-flex;
   align-items: center;
@@ -592,6 +605,8 @@ watch(activeTab, async tab => {
   border-bottom: 2px solid transparent;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color 0.15s, border-color 0.15s;
 }
 .page-tab.active {

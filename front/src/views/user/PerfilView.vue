@@ -436,7 +436,7 @@ async function submit() {
 
 .data-list { margin: 0; }
 .data-row {
-  display: grid; grid-template-columns: 160px 1fr; gap: var(--sp-2);
+  display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--sp-2);
   padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-border);
 }
 .data-row:first-child { border-top: 1px solid var(--color-border); }
@@ -445,7 +445,14 @@ async function submit() {
   color: var(--color-text); display: flex; align-items: center; gap: var(--sp-2);
 }
 .data-label i { width: 14px; text-align: center; color: var(--color-muted); }
-.data-value { font-size: var(--font-size-sm); color: var(--color-muted); margin: 0; }
+.data-value {
+  font-size: var(--font-size-sm); color: var(--color-muted); margin: 0;
+  /* Permite romper palabras largas sin espacios (ej. emails) en móvil para
+     que no fuercen el ancho de la columna y desborden el viewport. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
 
 /* ─── Edit mode body ───────────────────────────────────────────────────────── */
 .edit-body {
