@@ -24,7 +24,11 @@ const selectedContent = ref<{ tema: TemaVM; contenido: ContenidoVM } | null>(nul
 
 const addingContentFor = ref<number | null>(null)
 const showTopicModal = ref(false)
-const mobileSidebarOpen = ref(false)
+// En móvil el sidebar (lista de módulos) arranca visible al entrar a la
+// asignatura. Al seleccionar un contenido se cierra (ver selectContent),
+// dejando el panel de detalle a pantalla completa; el botón "Ver módulos"
+// permite reabrirlo en cualquier momento.
+const mobileSidebarOpen = ref(true)
 const newTopic = ref({ nombre: '', orden: 1 })
 const savingTopic = ref(false)
 
@@ -114,11 +118,10 @@ async function load() {
     const res = await getSubject(Number(route.params.id))
     const detalle = (res.data as any).detalle ?? res.data
     asignatura.value = detalle
-    // Abrir el primer tema por defecto en la carga inicial
-    // (no machacar si ya hay uno abierto — ej. tras crear un tema nuevo)
-    if (detalle?.temas?.length) {
-      openTemaId.value ??= detalle.temas[0].idTema!
-    }
+    // Todos los módulos arrancan cerrados. Auto-abrir el primero creaba un
+    // estado inconsistente (abierto visualmente pero no seleccionado) que
+    // obligaba a hacer doble click para entrar.
+    // saveTopic() sigue seteando openTemaId al tema recién creado.
   } finally {
     loading.value = false
   }
