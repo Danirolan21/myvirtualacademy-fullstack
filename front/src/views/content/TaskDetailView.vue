@@ -603,9 +603,23 @@ function isLate(fechaEntregada: string) {
   border: 1px solid var(--color-border);
 }
 .material-icon { color: #198754; font-size: var(--font-size-xl); flex-shrink: 0; }
-.material-info { flex: 1; }
-.material-name { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+.material-info { flex: 1; min-width: 0; }
+.material-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .material-sub { font-size: var(--font-size-xs); color: var(--color-muted); }
+
+/* En móvil el nombre del archivo es muy largo y empuja el botón fuera.
+   Permitir que el botón "Descargar" baje a una segunda línea ocupando todo
+   el ancho — más usable que un botón cortado fuera del viewport. */
+@media (max-width: 768px) {
+  .material-row { flex-wrap: wrap; }
+  .material-row > .btn { width: 100%; justify-content: center; }
+}
 
 /* Submission card */
 .submission-card {
@@ -649,7 +663,15 @@ function isLate(fechaEntregada: string) {
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--font-size-sm);
 }
-.file-icon { color: var(--color-muted); }
+.file-row > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-icon { color: var(--color-muted); flex-shrink: 0; }
+.file-row > .btn { flex-shrink: 0; }
 .ms-auto { margin-left: auto; }
 
 /* Submit form */
