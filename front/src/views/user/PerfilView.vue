@@ -424,8 +424,17 @@ async function submit() {
 }
 .course-mini-info { flex: 1; min-width: 0; }
 .course-mini-name {
-  font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: var(--sp-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--sp-1);
+  /* Hasta 2 líneas con ellipsis si excede. Nombres largos como
+     "Master Desarrollo Web FullStack + MultiCloud" caben enteros en móvil. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .course-mini-arrow { color: var(--color-muted); font-size: 11px; flex-shrink: 0; }
 .empty-courses {
