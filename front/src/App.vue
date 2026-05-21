@@ -26,7 +26,11 @@ onMounted(async () => {
       </main>
       <footer class="site-footer">
         <div class="container">
-          &copy; 2026 - MyVirtualAcademy - <a href="#">Privacy</a>
+          <div>&copy; 2026 - MyVirtualAcademy</div>
+          <div class="site-footer-credit">
+            Hecho por
+            <a href="https://danirolan.com" target="_blank" rel="noopener">Daniel Rodríguez Lancha</a>
+          </div>
         </div>
       </footer>
     </div>
@@ -59,4 +63,11 @@ onMounted(async () => {
   font-size: var(--font-size-sm);
   background: var(--color-surface);
 }
+.site-footer-credit { margin-top: var(--sp-1); font-size: var(--font-size-xs); }
+.site-footer a {
+  color: var(--color-muted);
+  text-decoration: underline;
+  transition: color 0.15s;
+}
+.site-footer a:hover { color: var(--color-text); }
 </style>

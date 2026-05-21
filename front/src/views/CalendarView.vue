@@ -17,12 +17,12 @@ const popover = ref<{ year: number; month: number; day: number; events: Calendar
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const WD_SHORT  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+const MONTHS_ES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+const WD_SHORT  = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
 const PALETTE   = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ec4899','#14b8a6','#f97316','#8b5cf6','#84cc16','#ef4444']
 
-const VIEW_LABELS:    Record<CalView, string> = { day:'Day', week:'Week', month:'Month', year:'Year', schedule:'Schedule' }
-const VIEW_SHORTCUTS: Record<CalView, string> = { day:'D',   week:'W',   month:'M',     year:'Y',   schedule:'A' }
+const VIEW_LABELS:    Record<CalView, string> = { day:'Día', week:'Semana', month:'Mes', year:'Año', schedule:'Agenda' }
+const VIEW_SHORTCUTS: Record<CalView, string> = { day:'D',   week:'S',      month:'M',  year:'A',   schedule:'G' }
 const VIEW_OPTIONS: CalView[] = ['day', 'week', 'month', 'year', 'schedule']
 
 // ── Derived date parts ────────────────────────────────────────────────────────
@@ -35,22 +35,22 @@ const dateLabel = computed(() => {
   const mo = currentMonth.value
   switch (currentView.value) {
     case 'day':
-      return `${MONTHS_EN[mo]} ${currentDate.value.getDate()}, ${yr}`
+      return `${currentDate.value.getDate()} de ${MONTHS_ES[mo]} de ${yr}`
     case 'week': {
       const s = weekStart(currentDate.value)
       const e = new Date(s); e.setDate(s.getDate() + 6)
-      if (s.getMonth() === e.getMonth()) return `${MONTHS_EN[s.getMonth()]} ${s.getFullYear()}`
+      if (s.getMonth() === e.getMonth()) return `${MONTHS_ES[s.getMonth()]} ${s.getFullYear()}`
       const ey = e.getFullYear()
-      return `${MONTHS_EN[s.getMonth()].slice(0,3)} – ${MONTHS_EN[e.getMonth()].slice(0,3)} ${ey}`
+      return `${MONTHS_ES_SHORT[s.getMonth()]} – ${MONTHS_ES_SHORT[e.getMonth()]} ${ey}`
     }
     case 'month':
-      return `${MONTHS_EN[mo]} ${yr}`
+      return `${MONTHS_ES[mo]} ${yr}`
     case 'year':
       return `${yr}`
     case 'schedule': {
       const e = new Date(currentDate.value); e.setMonth(e.getMonth() + 5)
       const ey = e.getFullYear()
-      return `${MONTHS_EN[mo].slice(0,3)} – ${MONTHS_EN[e.getMonth()].slice(0,3)} ${yr === ey ? yr : ey}`
+      return `${MONTHS_ES_SHORT[mo]} – ${MONTHS_ES_SHORT[e.getMonth()]} ${yr === ey ? yr : ey}`
     }
   }
 })
@@ -90,10 +90,24 @@ function setView(v: CalView) {
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// Las etiquetas visibles en la UI son las españolas (D/S/M/A/G). Mantenemos
+// también los atajos legacy en inglés (D/W/M/Y/A) para no romper la memoria
+// muscular de usuarios que ya los conocen. Conflictos resueltos:
+//   - D: 'day' en ambos
+//   - M: 'month' en ambos
+//   - A: legacy=schedule, nuevo=year  → priorizamos el NUEVO (year)
+//   - W: legacy-only → week
+//   - Y: legacy-only → year (igual destino que A nuevo)
+//   - S: nuevo-only → week
+//   - G: nuevo-only → schedule
 function onKeyDown(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement).tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-  const map: Record<string, CalView> = { D:'day', W:'week', M:'month', Y:'year', A:'schedule' }
+  const map: Record<string, CalView> = {
+    D: 'day',
+    S: 'week',     M: 'month',  A: 'year',   G: 'schedule', // nuevos (ES)
+    W: 'week',                  Y: 'year',                  // legacy (EN)
+  }
   const v = map[e.key.toUpperCase()]
   if (v) setView(v)
 }
@@ -241,8 +255,8 @@ const dayEvents = computed(() =>
 
 const dayLabel = computed(() => {
   const d = currentDate.value
-  const wd = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]
-  return `${wd}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
+  const wd = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d.getDay()]
+  return `${wd}, ${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`
 })
 
 // ── Schedule view ─────────────────────────────────────────────────────────────
@@ -280,12 +294,12 @@ function isScheduleDateToday(fecha: string): boolean {
       <!-- ═══════════════════ HEADER ═══════════════════ -->
       <div class="cal-header">
         <div class="cal-header-left">
-          <button class="btn-today" @click="goToday">Today</button>
+          <button class="btn-today" @click="goToday">Hoy</button>
           <div class="nav-arrows">
-            <button class="nav-btn nav-btn-prev" @click="goPrev" aria-label="Previous">
+            <button class="nav-btn nav-btn-prev" @click="goPrev" aria-label="Anterior">
               <i class="fas fa-chevron-left"></i>
             </button>
-            <button class="nav-btn nav-btn-next" @click="goNext" aria-label="Next">
+            <button class="nav-btn nav-btn-next" @click="goNext" aria-label="Siguiente">
               <i class="fas fa-chevron-right"></i>
             </button>
           </div>
@@ -475,7 +489,7 @@ function isScheduleDateToday(fecha: string): boolean {
             <div v-for="group in scheduleGroups" :key="group.fecha" class="sv-group">
               <div class="sv-date-label" :class="{ 'sv-date-label--today': isScheduleDateToday(group.fecha) }">
                 {{ formatScheduleDate(group.fecha) }}
-                <span v-if="isScheduleDateToday(group.fecha)" class="sv-today-badge">Today</span>
+                <span v-if="isScheduleDateToday(group.fecha)" class="sv-today-badge">Hoy</span>
               </div>
               <div class="sv-events">
                 <div

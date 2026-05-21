@@ -225,7 +225,7 @@ async function submit() {
           <h2 class="section-heading">Más <span class="heading-accent">datos</span></h2>
           <dl class="data-list">
             <div class="data-row">
-              <dt class="data-label"><i class="fas fa-envelope"></i> Correo</dt>
+              <dt class="data-label"><i class="fas fa-envelope"></i> Email</dt>
               <dd class="data-value">{{ usuario.email }}</dd>
             </div>
             <div class="data-row">

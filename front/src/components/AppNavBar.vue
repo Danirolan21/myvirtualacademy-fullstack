@@ -226,12 +226,12 @@ onUnmounted(() => {
               to="/register"
               @click="dropdownOpen = false; closeMobileOnNav()"
             >REGISTRAR USUARIO</RouterLink>
-            <a class="dropdown-item dropdown-item-danger" href="#" @click.prevent="handleLogout">LOG OUT</a>
+            <a class="dropdown-item dropdown-item-danger" href="#" @click.prevent="handleLogout">CERRAR SESIÓN</a>
           </div>
         </div>
 
         <!-- Not authenticated: login link -->
-        <RouterLink v-else class="nav-link" to="/login">LOG IN</RouterLink>
+        <RouterLink v-else class="nav-link" to="/login">INICIAR SESIÓN</RouterLink>
 
         <!-- Hamburger for mobile -->
         <button class="mobile-toggle" type="button" @click="mobileOpen = !mobileOpen">

@@ -122,7 +122,7 @@ async function submit() {
           <h2 class="section-heading">Más <span class="heading-accent">datos</span></h2>
           <dl class="data-list">
             <div class="data-row">
-              <dt class="data-label"><i class="fas fa-envelope"></i> Correo</dt>
+              <dt class="data-label"><i class="fas fa-envelope"></i> Email</dt>
               <dd class="data-value">{{ usuario.email }}</dd>
             </div>
             <div class="data-row">
@@ -284,7 +284,7 @@ async function submit() {
 .data-list { margin: 0 0 var(--sp-6); }
 .data-row {
   display: grid;
-  grid-template-columns: 160px 1fr;
+  grid-template-columns: 160px minmax(0, 1fr);
   gap: var(--sp-2);
   padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--color-border);
@@ -304,6 +304,9 @@ async function submit() {
   font-size: var(--font-size-sm);
   color: var(--color-muted);
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .form-actions {
