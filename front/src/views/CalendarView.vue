@@ -17,7 +17,11 @@ const popover = ref<{ year: number; month: number; day: number; events: Calendar
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const MONTHS_ES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+// Forma corta en minúsculas: los meses no se capitalizan en español cuando
+// aparecen inline en una frase (ej. "18 – 24 may 2026", "abr – may 2026").
+// MONTHS_ES (forma larga) se mantiene capitalizada porque se usa en headers
+// destacados ("Mayo 2026").
+const MONTHS_ES_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 const WD_SHORT  = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
 const PALETTE   = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ec4899','#14b8a6','#f97316','#8b5cf6','#84cc16','#ef4444']
 
@@ -37,11 +41,24 @@ const dateLabel = computed(() => {
     case 'day':
       return `${currentDate.value.getDate()} de ${MONTHS_ES[mo]} de ${yr}`
     case 'week': {
+      // Rango de días explícito: el usuario ve exactamente qué 7 días tiene
+      // a la vista, sin ambigüedad entre meses ("27 abr – 3 may" vs un
+      // header genérico "Abr – May" que no decía qué días eran cuáles).
       const s = weekStart(currentDate.value)
       const e = new Date(s); e.setDate(s.getDate() + 6)
-      if (s.getMonth() === e.getMonth()) return `${MONTHS_ES[s.getMonth()]} ${s.getFullYear()}`
-      const ey = e.getFullYear()
-      return `${MONTHS_ES_SHORT[s.getMonth()]} – ${MONTHS_ES_SHORT[e.getMonth()]} ${ey}`
+      const sD = s.getDate(), eD = e.getDate()
+      const sM = MONTHS_ES_SHORT[s.getMonth()], eM = MONTHS_ES_SHORT[e.getMonth()]
+      const sY = s.getFullYear(),               eY = e.getFullYear()
+      // Mismo mes y año:        "18 – 24 may 2026"
+      if (sY === eY && s.getMonth() === e.getMonth()) {
+        return `${sD} – ${eD} ${sM} ${sY}`
+      }
+      // Cruza mes, mismo año:   "27 abr – 3 may 2026"
+      if (sY === eY) {
+        return `${sD} ${sM} – ${eD} ${eM} ${eY}`
+      }
+      // Cruza año:              "28 dic 2026 – 3 ene 2027"
+      return `${sD} ${sM} ${sY} – ${eD} ${eM} ${eY}`
     }
     case 'month':
       return `${MONTHS_ES[mo]} ${yr}`
@@ -1116,6 +1133,13 @@ function isScheduleDateToday(fecha: string): boolean {
 @media (max-width: 768px) {
   .cal-container { padding: var(--sp-4) var(--sp-3) var(--sp-8); }
   .date-label { font-size: var(--font-size-md); }
+
+  /* View selector pasa a fila propia a ancho completo en móvil.
+     Layout intencional (no consecuencia de overflow): el desplegable queda
+     siempre en su línea, evitando que se "caiga" alineado raro a la derecha
+     cuando el rango de fechas es largo. */
+  .view-dropdown-wrap { width: 100%; }
+  .view-selector-btn  { width: 100%; justify-content: space-between; }
 
   /* Month view: shorter cells on tablet */
   .mv-cell { min-height: 80px; padding: var(--sp-1); }
