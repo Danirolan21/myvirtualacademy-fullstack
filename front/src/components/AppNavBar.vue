@@ -220,12 +220,6 @@ onUnmounted(() => {
               to="/perfil"
               @click="dropdownOpen = false; closeMobileOnNav()"
             >PERFIL</RouterLink>
-            <RouterLink
-              v-if="auth.isAdmin"
-              class="dropdown-item"
-              to="/register"
-              @click="dropdownOpen = false; closeMobileOnNav()"
-            >REGISTRAR USUARIO</RouterLink>
             <a class="dropdown-item dropdown-item-danger" href="#" @click.prevent="handleLogout">CERRAR SESIÓN</a>
           </div>
         </div>
