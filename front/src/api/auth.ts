@@ -6,12 +6,4 @@ export const login = (email: string, password: string) =>
 
 export const logout = () => client.post('/api/auth/logout')
 
-export const register = (data: {
-  nombre: string
-  apellidos: string
-  email: string
-  password: string
-  idRol: number
-}) => client.post('/api/auth/register', data)
-
 export const getRoles = () => client.get<Rol[]>('/api/auth/roles')
