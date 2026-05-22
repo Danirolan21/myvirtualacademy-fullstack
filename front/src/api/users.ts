@@ -12,3 +12,11 @@ export const getUsers = () =>
 
 export const toggleUserActive = (id: number) =>
   client.put(`/api/users/${id}/toggle-active`)
+
+export const createUser = (data: {
+  nombre: string
+  apellidos: string
+  email: string
+  password: string
+  idRol: number
+}) => client.post<{ idUsuario: number; message: string }>('/api/users', data)

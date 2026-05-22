@@ -3,8 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { getCourses, deleteCourse, getEnrollments, getAvailableStudents, enrollStudent, unenrollStudent } from '../../api/courses'
-import { getUsers, toggleUserActive } from '../../api/users'
-import { getRoles, register } from '../../api/auth'
+import { getUsers, toggleUserActive, createUser } from '../../api/users'
+import { getRoles } from '../../api/auth'
 import { getAdminStats } from '../../api/admin'
 import type { AdminStats } from '../../api/admin'
 import type { VistaCursosDetalles, Rol } from '../../types'
@@ -140,7 +140,7 @@ async function submitRegister() {
   regMensaje.value = ''
   regSaving.value = true
   try {
-    await register(regForm.value)
+    await createUser(regForm.value)
     regMensaje.value = `Usuario ${regForm.value.nombre} ${regForm.value.apellidos} registrado correctamente.`
     regForm.value = { nombre: '', apellidos: '', email: '', password: '', idRol: roles.value[0]?.idRol ?? 0 }
     await loadUsers()
