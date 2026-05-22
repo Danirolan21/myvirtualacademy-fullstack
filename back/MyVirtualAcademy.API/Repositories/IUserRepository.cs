@@ -9,8 +9,13 @@ namespace MyVirtualAcademy.Repositories
     public interface IUserRepository
     {
         // ─── Auth / Register ─────────────────────────────────────────────────
-        Task Register(string nombre, string apellidos, string email, string password, int idRol);
+        // Devuelve el IdUsuario del usuario creado. El parámetro `activo`
+        // permite que el admin (POST /api/users) cree usuarios listos para
+        // hacer login inmediatamente, mientras que el registro público
+        // (POST /api/auth/register) los deja en false por defecto.
+        Task<int> Register(string nombre, string apellidos, string email, string password, int idRol, bool activo = false);
         Task<int?> GetRolIdByNombreAsync(string nombre);
+        Task<bool> RolExistsAsync(int idRol);
         Task<Usuario?> FindUserByEmailAsync(string email);
         Task<Usuario> FindUserAsync(int idUsuario);
         Task MigratePasswordToBCryptAsync(int idUsuario, string plainPassword);

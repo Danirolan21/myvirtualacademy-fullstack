@@ -28,6 +28,60 @@ namespace MyVirtualAcademy.API.Controllers
             return Ok(users); // already grouped by user with concatenated roles
         }
 
+        [HttpPost]
+        [Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        {
+            if (request is null)
+                return BadRequest(new { message = "Datos no proporcionados" });
+
+            var nombre = request.Nombre?.Trim() ?? "";
+            var apellidos = request.Apellidos?.Trim() ?? "";
+            var email = request.Email?.Trim() ?? "";
+            var password = request.Password ?? "";
+
+            if (string.IsNullOrWhiteSpace(nombre))
+                return BadRequest(new { message = "El nombre es obligatorio" });
+            if (string.IsNullOrWhiteSpace(apellidos))
+                return BadRequest(new { message = "Los apellidos son obligatorios" });
+            if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                return BadRequest(new { message = "El email no es válido" });
+            if (password.Length < 6)
+                return BadRequest(new { message = "La contraseña debe tener al menos 6 caracteres" });
+            if (!await repo.RolExistsAsync(request.IdRol))
+                return BadRequest(new { message = "El rol seleccionado no existe" });
+
+            var existing = await repo.FindUserByEmailAsync(email);
+            if (existing is not null)
+                return Conflict(new { message = "Ya existe una cuenta con este email" });
+
+            // activo: true → el usuario puede hacer login inmediatamente sin
+            // que el admin tenga que activarlo a mano en un segundo paso.
+            var idUsuario = await repo.Register(nombre, apellidos, email, password, request.IdRol, activo: true);
+            return StatusCode(StatusCodes.Status201Created,
+                new { idUsuario, message = "Usuario creado correctamente" });
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public record CreateUserRequest(
+            string Nombre,
+            string Apellidos,
+            string Email,
+            string Password,
+            int IdRol);
+
         [HttpGet("profesores")]
         [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> GetProfesores()

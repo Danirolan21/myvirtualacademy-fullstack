@@ -17,11 +17,11 @@ namespace MyVirtualAcademy.Repositories
         }
 
         #region MANAGED METHODS
-        public async Task Register(string nombre, string apellidos,
-            string email, string password, int idRol)
+        public async Task<int> Register(string nombre, string apellidos,
+            string email, string password, int idRol, bool activo = false)
         {
             var strategy = this.context.Database.CreateExecutionStrategy();
-            await strategy.ExecuteAsync(async () =>
+            return await strategy.ExecuteAsync(async () =>
             {
                 using var tx = await this.context.Database.BeginTransactionAsync();
                 try
@@ -37,6 +37,7 @@ namespace MyVirtualAcademy.Repositories
                         PassBCrypt = HelperCryptography.HashPasswordBCrypt(password),
                         MigratedToBCrypt = true,
                         Password = string.Empty,
+                        Activo = activo,
                         FechaRegistro = DateTime.Now,
                         FotoPerfil = "ProfileImage_Default.jpg"
                     };
@@ -51,6 +52,7 @@ namespace MyVirtualAcademy.Repositories
                     await this.context.SaveChangesAsync();
 
                     await tx.CommitAsync();
+                    return user.IdUsuario;
                 }
                 catch
                 {
@@ -66,6 +68,9 @@ namespace MyVirtualAcademy.Repositories
                 .FirstOrDefaultAsync(r => r.Nombre == nombre);
             return rol?.IdRol;
         }
+
+        public async Task<bool> RolExistsAsync(int idRol)
+            => await this.context.Roles.AnyAsync(r => r.IdRol == idRol);
 
         public async Task<Usuario?> FindUserByEmailAsync(string email)
         {
