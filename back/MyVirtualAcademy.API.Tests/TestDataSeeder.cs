@@ -5,6 +5,7 @@ namespace MyVirtualAcademy.API.Tests;
 
 public static class TestDataSeeder
 {
+    public const string AdminEmail = "admin.test@example.com";
     public const string ProfesorEmail = "profesor.test@example.com";
     public const string EstudianteEmail = "estudiante.test@example.com";
     public const string TestPassword = "Test1234";
@@ -27,11 +28,14 @@ public static class TestDataSeeder
             ctx.SaveChanges();
         }
 
-        SeedUser(ctx, ProfesorEmail, "Profesor", "Test", RolProfesorId);
+        // IsAdmin = true requerido para satisfacer la policy AdminOnly
+        // (Program.cs: RequireClaim("IsAdmin", "true")).
+        SeedUser(ctx, AdminEmail,      "Admin",      "Test", RolAdministradorId, isAdmin: true);
+        SeedUser(ctx, ProfesorEmail,   "Profesor",   "Test", RolProfesorId);
         SeedUser(ctx, EstudianteEmail, "Estudiante", "Test", RolEstudianteId);
     }
 
-    private static void SeedUser(MyVirtualAcademyContext ctx, string email, string nombre, string apellidos, int idRol)
+    private static void SeedUser(MyVirtualAcademyContext ctx, string email, string nombre, string apellidos, int idRol, bool isAdmin = false)
     {
         if (ctx.Usuarios.Any(u => u.Email == email)) return;
 
@@ -48,7 +52,7 @@ public static class TestDataSeeder
             FechaRegistro = DateTime.UtcNow,
             Activo = true,
             FotoPerfil = "ProfileImage_Default.jpg",
-            IsAdmin = false
+            IsAdmin = isAdmin
         };
         ctx.Usuarios.Add(user);
         ctx.SaveChanges();
