@@ -14,7 +14,7 @@
 
 | Entorno | URL |
 |---------|-----|
-| Frontend (Vercel) | https://myvirtualacademy.vercel.app |
+| Frontend (Vercel) | https://myvirtualacademy.danirolan.com |
 | Backend — Swagger | https://myvirtualacademy.runasp.net/swagger |
 
 > **Aviso — cold start:** la base de datos Azure SQL está en nivel serverless y se pausa tras un periodo de inactividad. El primer login después de un tiempo sin tráfico puede tardar entre 30 y 60 segundos. Es normal; los accesos posteriores responden con latencia habitual.
