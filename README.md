@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/Danirolan21/myvirtualacademy-fullstack/actions/workflows/ci.yml/badge.svg)](https://github.com/Danirolan21/myvirtualacademy-fullstack/actions/workflows/ci.yml)
 ![Vue](https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6?logo=typescript&logoColor=white)
 ![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-9.0-512BD4?logo=dotnet&logoColor=white)
 ![Azure SQL](https://img.shields.io/badge/Azure_SQL-Database-0078D4?logo=microsoftazure&logoColor=white)
 
@@ -14,7 +14,7 @@
 
 | Entorno | URL |
 |---------|-----|
-| Frontend (Vercel) | https://myvirtualacademy.danirolan.com |
+| Frontend | https://myvirtualacademy.danirolan.com |
 | Backend — Swagger | https://myvirtualacademy.runasp.net/swagger |
 
 > **Aviso — cold start:** la base de datos Azure SQL está en nivel serverless y se pausa tras un periodo de inactividad. El primer login después de un tiempo sin tráfico puede tardar entre 30 y 60 segundos. Es normal; los accesos posteriores responden con latencia habitual.
@@ -191,7 +191,7 @@ Configuradas como variables de entorno del sistema en producción (o en `appsett
 | `JwtSettings__Audience` | Audience del token (por defecto: `MyVirtualAcademyUsers`) |
 | `JwtSettings__AccessTokenExpiryMinutes` | Duración del access token (por defecto: 15) |
 | `JwtSettings__RefreshTokenExpiryDays` | Duración del refresh token (por defecto: 7) |
-| `AllowedOrigins__0` | Origen del frontend para CORS (ej. `https://tu-app.vercel.app`) |
+| `AllowedOrigins__0` | Origen del frontend para CORS (ej. `https://myvirtualacademy.danirolan.com`) |
 
 ### Frontend
 
@@ -209,7 +209,7 @@ En desarrollo no es necesaria si se usa el proxy de Vite.
 
 ```mermaid
 graph TD
-    Browser["Navegador<br/>(Vercel)"]
+    Browser["Navegador"]
 
     subgraph Frontend
         Vue["Vue 3 + Pinia<br/>Vue Router 4"]
@@ -248,7 +248,7 @@ Funcionalidad principal completa para los tres roles. El proyecto se desarrolló
 - Módulo de exámenes pendiente (stub en frontend y backend)
 - Sin paginación en listados largos
 - Sin búsqueda o filtrado de contenidos dentro de una asignatura
-- Cobertura de tests inicial (5 tests de integración sobre auth y content); resto de endpoints (cursos, asignaturas, temas, tareas, calificaciones, notificaciones) sin cobertura aún
+- Cobertura de tests inicial (9 tests de integración sobre auth, content y users); resto de endpoints (cursos, asignaturas, temas, tareas, calificaciones, notificaciones) sin cobertura aún
 - Los archivos subidos por usuarios (avatares, entregas, portadas de curso) se almacenan en disco local del servidor. En MonsterASP.NET el almacenamiento es persistente, pero migrar a un entorno containerizado o serverless requeriría almacenamiento externo (S3, Azure Blob, etc.)
 
 ---
